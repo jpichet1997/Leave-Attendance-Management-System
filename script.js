@@ -22,8 +22,22 @@ const dict = {
 };
 
 const t = (key) => dict[lang][key] || key;
-function toggleLanguage() { lang = lang === 'th' ? 'en' : 'th'; localStorage.setItem('hr_lang', lang); location.reload(); }
-function applyLang() { document.querySelectorAll('.th-en').forEach(el => el.innerText = el.getAttribute(`data-${lang}`)); const btn = document.getElementById('top-lang-btn'); if(btn) btn.innerText = lang === 'th' ? 'EN' : 'TH'; }
+
+function toggleLanguage() { 
+    lang = lang === 'th' ? 'en' : 'th'; 
+    localStorage.setItem('hr_lang', lang); 
+    applyLang(); 
+    
+    if (AppState && AppState.currentUser) {
+        App.boot();
+    }
+}
+
+function applyLang() { 
+    document.querySelectorAll('.th-en').forEach(el => el.innerText = el.getAttribute(`data-${lang}`)); 
+    const btn = document.getElementById('top-lang-btn'); 
+    if(btn) btn.innerText = lang === 'th' ? 'EN' : 'TH'; 
+}
 
 // --- 2. Database & State (Firebase Version) ---
 const defaultProfile = { email: 'user@quantum.co.th', phone: '081-234-5678', dept: 'IT Operations', startDate: '2024-01-15', avatar: '' };
@@ -38,13 +52,11 @@ const firebaseConfig = {
     measurementId: "G-SGL2CY68DY"
 };
 
-// ตรวจสอบและเริ่มต้นการเชื่อมต่อ Firebase
 if (!firebase.apps.length) {
     firebase.initializeApp(firebaseConfig);
 }
 const db = firebase.firestore();
 
-// ระบุเส้นทางไปยัง Document ที่เราจะเก็บข้อมูล (ในที่นี้รวมทุกอย่างไว้ในที่เดียวเพื่อให้ง่าย)
 const dbRef = db.collection('hr_database').doc('main_state');
 
 const defaultState = {
@@ -77,12 +89,15 @@ const DB = {
             return AppState;
         } catch (error) {
             console.error("เกิดข้อผิดพลาดในการโหลดข้อมูลจาก Firebase:", error);
-            return AppState; // คืนค่าเริ่มต้นถ้าโหลดไม่สำเร็จ (เช่น ไม่มีเน็ต)
+            return AppState; 
         }
     },
     save: (state) => {
-        // ใช้ merge: true เพื่อให้มันอัปเดตเฉพาะส่วนที่มีการเปลี่ยนแปลง
-        dbRef.set(state, { merge: true }).catch(err => console.error("บันทึกข้อมูลไม่สำเร็จ:", err));
+        // 🟢 สำคัญ: ก๊อปปี้ state และลบ currentUser ออกก่อนเซฟขึ้น Cloud เพื่อไม่ให้บัญชีตีกัน
+        const dataToSave = { ...state };
+        delete dataToSave.currentUser;
+        
+        dbRef.set(dataToSave, { merge: true }).catch(err => console.error("บันทึกข้อมูลไม่สำเร็จ:", err));
     }
 };
 
@@ -128,10 +143,20 @@ const Auth = {
     login: () => {
         const u = document.getElementById('login-user').value, p = document.getElementById('login-pass').value;
         const acc = AppState.users.find(x => x.username === u && x.password === p);
-        if (acc) { AppState.currentUser = acc; DB.save(AppState); App.boot(); } 
+        if (acc) { 
+            AppState.currentUser = acc; 
+            // 🟢 เซฟข้อมูลการล็อกอินลงในเครื่อง (Local Storage)
+            localStorage.setItem('hr_logged_user', JSON.stringify(acc)); 
+            App.boot(); 
+        } 
         else alert('Invalid credentials');
     },
-    logout: () => { AppState.currentUser = null; DB.save(AppState); location.reload(); }
+    logout: () => { 
+        AppState.currentUser = null; 
+        // 🟢 ลบข้อมูลออกจากเครื่องตอนกดออกจากระบบ
+        localStorage.removeItem('hr_logged_user'); 
+        location.reload(); 
+    }
 };
 
 const App = {
@@ -602,12 +627,37 @@ const Views = {
     `
 };
 
+function toggleSidebar() {
+    document.querySelector('.sidebar').classList.toggle('show');
+}
+
+document.addEventListener('click', function(event) {
+    const sidebar = document.querySelector('.sidebar');
+    if (!sidebar) return; 
+
+    const isClickInsideSidebar = sidebar.contains(event.target);
+    const isClickHamburger = event.target.classList.contains('hamburger-btn');
+
+    if (window.innerWidth <= 768 && sidebar.classList.contains('show') && (!isClickInsideSidebar || event.target.closest('.nav-item'))) {
+        if(!isClickHamburger){
+            sidebar.classList.remove('show');
+        }
+    }
+});
+
 // --- 6. Initialization (Firebase Flow) ---
 async function startApp() {
     await DB.load(); 
-    applyStaticTranslations();
-    if(AppState.currentUser) {
+    applyLang(); 
+    
+    // 🟢 ตรวจสอบสถานะล็อกอินจากเครื่อง (Local Storage) แทน
+    const savedUser = localStorage.getItem('hr_logged_user');
+    if(savedUser) {
+        AppState.currentUser = JSON.parse(savedUser);
         App.boot();
+    } else {
+        document.getElementById('auth-view').style.display = 'flex';
+        document.getElementById('app-view').style.display = 'none';
     }
 }
 
