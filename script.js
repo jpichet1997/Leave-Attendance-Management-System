@@ -8,7 +8,13 @@ const dict = {
         'loc_office': '🏢 สำนักงานใหญ่', 'loc_wfh': '🏠 WFH', 'salary_title': 'เงินเดือนสุทธิ (เดือนนี้)',
         'show': 'แสดง', 'hide': 'ซ่อน', 'leave_bal': 'วันลาคงเหลือ', 'req_ot': 'ขอทำ OT', 'req_lv': 'ขอลางาน',
         'tab_log': 'ประวัติลงเวลา', 'tab_lv': 'ประวัติการลา', 'tab_ot': 'ประวัติ OT', 'no_data': 'ไม่พบข้อมูล', 
-        'approve': 'อนุมัติ', 'reject': 'ปฏิเสธ', 'loading': 'กำลังดึงข้อมูล...'
+        'approve': 'อนุมัติ', 'reject': 'ปฏิเสธ', 'loading': 'กำลังดึงข้อมูล...',
+        'slip_base': 'เงินเดือนพื้นฐาน', 'slip_ot': 'เงินค่าล่วงเวลา (OT)', 'slip_allow': 'เบี้ยขยัน/ค่าตำแหน่ง',
+        'slip_total_earn': 'รวมรายได้', 'slip_sso': 'หัก ประกันสังคม', 'slip_tax': 'หัก ภาษี ณ ที่จ่าย (ประมาณ)',
+        'slip_absent': 'หัก ขาด/ลา/สาย', 'slip_total_deduct': 'รวมรายการหัก', 'slip_net': 'เงินเดือนสุทธิ',
+        'acc_locked': '⛔ บัญชีผู้ใช้ถูกระงับหรือหมดอายุ โปรดติดต่อ Admin',
+        'btn_active': 'ใช้งานอยู่', 'btn_inactive': 'ถูกระงับ',
+        'act_disable': 'ปิดใช้งาน', 'act_enable': 'เปิดใช้งาน'
     },
     'en': {
         'dash': 'Dashboard', 'time': 'Time & Leave', 'slip': 'E-Payslip', 'cal': 'Company Calendar', 'doc': 'Policies & Docs', 'prof': 'My Profile',
@@ -17,18 +23,27 @@ const dict = {
         'loc_office': '🏢 Head Office', 'loc_wfh': '🏠 Remote WFH', 'salary_title': 'Net Salary (Current)',
         'show': 'Show', 'hide': 'Hide', 'leave_bal': 'Leave Balance', 'req_ot': 'Request OT', 'req_lv': 'Request Leave',
         'tab_log': 'Clock Logs', 'tab_lv': 'Leave History', 'tab_ot': 'OT History', 'no_data': 'No records found', 
-        'approve': 'Approve', 'reject': 'Reject', 'loading': 'Fetching data...'
+        'approve': 'Approve', 'reject': 'Reject', 'loading': 'Fetching data...',
+        'slip_base': 'Base Salary', 'slip_ot': 'OT Pay', 'slip_allow': 'Allowances',
+        'slip_total_earn': 'Total Earnings', 'slip_sso': 'Deduct SSO', 'slip_tax': 'Deduct Tax (Est.)',
+        'slip_absent': 'Deduct Absences', 'slip_total_deduct': 'Total Deductions', 'slip_net': 'Net Salary',
+        'acc_locked': '⛔ Account suspended or expired. Please contact Admin.',
+        'btn_active': 'Active', 'btn_inactive': 'Inactive',
+        'act_disable': 'Disable', 'act_enable': 'Enable'
     }
 };
 
 const t = (key) => dict[lang][key] || key;
 
-function toggleLanguage() { 
+function toggleLanguage(event) { 
+    if(event) event.preventDefault(); 
     lang = lang === 'th' ? 'en' : 'th'; 
     localStorage.setItem('hr_lang', lang); 
     applyLang(); 
     
-    if (AppState && AppState.currentUser) {
+    // 🟢 แก้ไข: เช็คให้แน่ใจว่าหน้าเว็บแสดงผลอยู่ ถึงจะโหลดข้อมูลใหม่ (ห้ามทำตอนอยู่หน้าล็อกอิน)
+    const authView = document.getElementById('auth-view');
+    if (AppState && AppState.currentUser && authView.style.display === 'none') {
         App.boot();
     }
 }
@@ -36,12 +51,15 @@ function toggleLanguage() {
 function applyLang() { 
     document.querySelectorAll('.th-en').forEach(el => el.innerText = el.getAttribute(`data-${lang}`)); 
     const btn = document.getElementById('top-lang-btn'); 
-    if(btn) btn.innerText = lang === 'th' ? 'EN' : 'TH'; 
+    if(btn) {
+        btn.innerText = lang === 'th' ? 'EN' : 'TH'; 
+        btn.onclick = (e) => toggleLanguage(e); 
+    }
+    const langBtns = document.querySelectorAll('.lang-switch');
+    langBtns.forEach(btn => { btn.onclick = (e) => toggleLanguage(e); });
 }
 
 // --- 2. Database & State (Firebase Version) ---
-const defaultProfile = { email: 'user@quantum.co.th', phone: '081-234-5678', dept: 'IT Operations', startDate: '2024-01-15', avatar: '' };
-
 const firebaseConfig = {
     apiKey: "AIzaSyAUHCBVj2_6grlBdexUmP1BjzflOCaHiMQ",
     authDomain: "hr-system-2026-7c138.firebaseapp.com",
@@ -52,26 +70,26 @@ const firebaseConfig = {
     measurementId: "G-SGL2CY68DY"
 };
 
-if (!firebase.apps.length) {
-    firebase.initializeApp(firebaseConfig);
-}
+if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
-
 const dbRef = db.collection('hr_database').doc('main_state');
 
 const defaultState = {
     users: [
-        { username: 'admin', password: '123', name: 'Manager Admin', role: 'admin', dept: 'Management' },
-        { username: 'user', password: '123', name: 'พิเชษฐ์ แจ้งกระจ่าง', role: 'employee', dept: 'IT Operations' }
+        { username: 'admin', password: '123', name: 'Manager Admin', role: 'admin', dept: 'Management', isActive: true },
+        { username: 'user', password: '123', name: 'พิเชษฐ์ แจ้งกระจ่าง', role: 'employee', dept: 'IT Operations', isActive: true }
     ],
     currentUser: null, 
     dailyClock: {}, 
-    leaveBalances: { 'user': { annual: 8.5, sick: 28 } }, 
+    leaveBalances: { 'user': { annual: 8.5, sick: 28 }, 'admin': { annual: 15, sick: 30 } }, 
     requests: [], 
     timeLogs: [], 
     notifications: [], 
-    profile: defaultProfile,
-    settings: { companyName: 'Quantum Corp', leaveQuota: 10 }
+    profiles: { 
+        'admin': { email: 'admin@quantum.co.th', phone: '089-999-9999', startDate: '2020-01-01', avatar: '' },
+        'user': { email: 'user@quantum.co.th', phone: '081-234-5678', startDate: '2024-01-15', avatar: '' }
+    },
+    settings: { companyName: 'Quantum Corp', leaveQuota: 10, broadcast: '' }
 };
 
 let AppState = defaultState;
@@ -82,29 +100,31 @@ const DB = {
             const doc = await dbRef.get();
             if (doc.exists) {
                 AppState = doc.data();
-            } else {
-                await dbRef.set(defaultState);
-                AppState = defaultState;
+                
+                // 🟢 สำคัญมาก! ล้างข้อมูลการล็อกอินเก่าๆ ที่อาจค้างอยู่บน Firebase ทิ้งให้หมด
+                AppState.currentUser = null; 
+
+                if(!AppState.profiles) {
+                    AppState.profiles = defaultState.profiles;
+                    if(AppState.profile) AppState.profiles['user'] = AppState.profile;
+                }
+                if (AppState.settings.broadcast === undefined) AppState.settings.broadcast = '';
+            } else { 
+                await dbRef.set(defaultState); 
+                AppState = defaultState; 
             }
             return AppState;
-        } catch (error) {
-            console.error("เกิดข้อผิดพลาดในการโหลดข้อมูลจาก Firebase:", error);
-            return AppState; 
-        }
+        } catch (error) { console.error("Firebase Load Error:", error); return AppState; }
     },
     save: (state) => {
-        // 🟢 สำคัญ: ก๊อปปี้ state และลบ currentUser ออกก่อนเซฟขึ้น Cloud เพื่อไม่ให้บัญชีตีกัน
         const dataToSave = { ...state };
         delete dataToSave.currentUser;
-        
-        dbRef.set(dataToSave, { merge: true }).catch(err => console.error("บันทึกข้อมูลไม่สำเร็จ:", err));
+        dbRef.set(dataToSave, { merge: true }).catch(err => console.error("Save Error:", err));
     }
 };
 
 let chartInst = null; 
 let isSalaryVisible = false; 
-
-// --- Calendar State ---
 let calMonth = new Date().getMonth();
 let calYear = new Date().getFullYear();
 
@@ -122,7 +142,7 @@ const Notif = {
         const b = document.getElementById('notif-badge');
         if(b) { b.innerText = unread; b.style.display = unread > 0 ? 'block' : 'none'; }
         const list = document.getElementById('notif-list');
-        if(list) list.innerHTML = notifs.slice(0, 5).map(n => `<div class="notif-item ${n.isRead?'':'unread'}" onclick="Notif.read(${n.id})"><div style="color:var(--primary); font-weight:500;">${n.message}</div><small style="color:var(--text-muted);">${n.time}</small></div>`).join('') || `<div class="empty-state">${t('no_data')}</div>`;
+        if(list) list.innerHTML = notifs.slice(0, 5).map(n => `<div class="notif-item ${n.isRead?'':'unread'}" onclick="App.nav('time', this)"><div style="color:var(--primary); font-weight:500;">${n.message}</div><small style="color:var(--text-muted);">${n.time}</small></div>`).join('') || `<div class="empty-state">${t('no_data')}</div>`;
     },
     toggle: () => document.getElementById('notif-dropdown').classList.toggle('show'),
     read: (id) => { const n = AppState.notifications.find(x => x.id === id); if(n) { n.isRead = true; DB.save(AppState); Notif.render(); } }
@@ -136,24 +156,26 @@ const Auth = {
     register: () => {
         const name = document.getElementById('reg-name').value, user = document.getElementById('reg-user').value, pass = document.getElementById('reg-pass').value, role = document.getElementById('reg-role').value;
         if (AppState.users.find(u => u.username === user)) return App.toast('Username is taken', 'error');
-        AppState.users.push({ username: user, password: pass, name: name, role: role, dept: role==='admin'?'HR':'General' });
+        AppState.users.push({ username: user, password: pass, name: name, role: role, dept: role==='admin'?'HR':'General', isActive: true });
         AppState.leaveBalances[user] = { annual: AppState.settings.leaveQuota, sick: 30 }; 
+        AppState.profiles[user] = { email: user+'@quantum.co.th', phone: '-', startDate: new Date().toLocaleDateString('en-CA'), avatar: '' };
         DB.save(AppState); App.toast('Account Created', 'success'); Auth.toggle('login'); 
     },
     login: () => {
         const u = document.getElementById('login-user').value, p = document.getElementById('login-pass').value;
         const acc = AppState.users.find(x => x.username === u && x.password === p);
         if (acc) { 
+            if (acc.isActive === false) {
+                alert(t('acc_locked')); 
+                return; 
+            }
             AppState.currentUser = acc; 
-            // 🟢 เซฟข้อมูลการล็อกอินลงในเครื่อง (Local Storage)
             localStorage.setItem('hr_logged_user', JSON.stringify(acc)); 
             App.boot(); 
-        } 
-        else alert('Invalid credentials');
+        } else alert('Invalid credentials');
     },
     logout: () => { 
         AppState.currentUser = null; 
-        // 🟢 ลบข้อมูลออกจากเครื่องตอนกดออกจากระบบ
         localStorage.removeItem('hr_logged_user'); 
         location.reload(); 
     }
@@ -178,7 +200,9 @@ const App = {
                 <div class="nav-divider">ADMINISTRATION</div>
                 <div class="nav-item" onclick="App.nav('admin-dir', this)">👥 ${t('admin_dir')}</div>
                 <div class="nav-item" onclick="App.nav('admin-rep', this)">📈 ${t('admin_rep')}</div>
-                <div class="nav-item" onclick="App.nav('admin-set', this)">⚙️ ${t('admin_set')}</div>`;
+                <div class="nav-item" onclick="App.nav('admin-set', this)">⚙️ ${t('admin_set')}</div>
+                <div class="nav-divider">PERSONAL</div>
+                <div class="nav-item" onclick="App.nav('prof', this)">⚙️ ${t('prof')}</div>`;
             App.nav('admin-dash', menu.children[1]);
         } else {
             menu.innerHTML = `
@@ -197,47 +221,40 @@ const App = {
     
     nav: (page, el) => {
         if(el) { document.querySelectorAll('.nav-item').forEach(x => x.classList.remove('active')); el.classList.add('active'); }
-        
-        document.getElementById('page-content').innerHTML = `
-            <div style="display:flex; flex-direction:column; justify-content:center; align-items:center; height:50vh;">
-                <div class="api-loader"></div><p style="margin-top:16px; color:var(--text-muted);">${t('loading')}</p>
-            </div>`;
-
+        document.getElementById('page-content').innerHTML = `<div style="display:flex; flex-direction:column; justify-content:center; align-items:center; height:50vh;"><div class="api-loader"></div><p style="margin-top:16px; color:var(--text-muted);">${t('loading')}</p></div>`;
         setTimeout(() => {
             document.getElementById('page-content').innerHTML = Views[page]();
             if(page === 'home') { isSalaryVisible = false; App.updateClock(); App.renderChart(); }
             if(page === 'payslip') App.genSlip();
             if(page === 'cal') App.renderCalendarGrid();
             if(page === 'admin-rep') App.renderAdminCharts();
+            if(page === 'admin-dash') App.renderAdminDashChart();
         }, 300);
     },
 
-    // --- Features ---
+    getSalary: () => {
+        const u = AppState.currentUser;
+        if(u.role === 'admin') { return { base: 85000, ot: 0, allow: 5000, sso: 750, tax: 6500, absent: 0, earn: 90000, deduct: 7250, net: 82750 }; } 
+        else { return { base: 35000, ot: 4250, allow: 1500, sso: 750, tax: 1250, absent: 0, earn: 40750, deduct: 2000, net: 38750 }; }
+    },
+
     updateAvatarImg: () => {
-        const img = document.getElementById('avatar-img');
-        const src = AppState.profile.avatar || `https://ui-avatars.com/api/?name=${AppState.currentUser.name}&background=eff6ff&color=2563eb&bold=true`;
-        img.src = src;
-        const profImg = document.getElementById('prof-avatar-img');
-        if(profImg) profImg.src = src;
+        const u = AppState.currentUser.username;
+        if(!AppState.profiles[u]) AppState.profiles[u] = { email: '', phone: '', startDate: '', avatar: '' }; 
+        const src = AppState.profiles[u].avatar || `https://ui-avatars.com/api/?name=${AppState.currentUser.name}&background=eff6ff&color=2563eb&bold=true`;
+        const img = document.getElementById('avatar-img'); if(img) img.src = src;
+        const profImg = document.getElementById('prof-avatar-img'); if(profImg) profImg.src = src;
     },
 
     handleAvatarUpload: (e) => {
-        const file = e.target.files[0];
-        if(file) {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                AppState.profile.avatar = e.target.result;
-                DB.save(AppState);
-                App.updateAvatarImg();
-                App.toast('Profile photo updated', 'success');
-            }
-            reader.readAsDataURL(file);
-        }
+        const file = e.target.files[0]; const u = AppState.currentUser.username;
+        if(file) { const reader = new FileReader(); reader.onload = (e) => { AppState.profiles[u].avatar = e.target.result; DB.save(AppState); App.updateAvatarImg(); App.toast('Profile photo updated', 'success'); }; reader.readAsDataURL(file); }
     },
 
     saveProfile: () => {
-        AppState.profile.email = document.getElementById('prof-email').value;
-        AppState.profile.phone = document.getElementById('prof-phone').value;
+        const u = AppState.currentUser.username;
+        AppState.profiles[u].email = document.getElementById('prof-email').value;
+        AppState.profiles[u].phone = document.getElementById('prof-phone').value;
         DB.save(AppState); App.toast('Profile saved securely', 'success');
     },
 
@@ -245,140 +262,227 @@ const App = {
         App.toast(`Downloading ${filename}...`);
         const blob = new Blob(["Simulated Document Content for: " + filename], { type: "text/plain" });
         const url = window.URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url; a.download = filename + ".txt"; a.click();
+        const a = document.createElement("a"); a.href = url; a.download = filename + ".txt"; a.click();
         window.URL.revokeObjectURL(url);
     },
 
-    // --- Calendar Logic ---
-    changeCalMonth: (dir) => {
-        calMonth += dir;
-        if(calMonth < 0) { calMonth = 11; calYear--; }
-        else if(calMonth > 11) { calMonth = 0; calYear++; }
-        App.renderCalendarGrid();
+    getMonthOptions: () => {
+        let options = '';
+        const today = new Date();
+        for(let i=0; i<12; i++) {
+            const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
+            const val = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2, '0')}`;
+            const label = d.toLocaleString('en-US', { month: 'long', year: 'numeric' });
+            options += `<option value="${val}">${label}</option>`;
+        }
+        return options;
     },
 
-    renderCalendarGrid: () => {
-        const wrapper = document.getElementById('cal-wrapper');
-        if(!wrapper) return;
-        
-        const d = new Date(calYear, calMonth, 1);
-        const monthName = d.toLocaleString('en-US', { month: 'long' });
-        document.getElementById('cal-title').innerText = `${monthName} ${calYear}`;
+    exportToCSV: () => {
+        App.toast('Exporting Database...');
+        let csv = "\uFEFFID,Name,Department,Role,Status,Annual Leave,Sick Leave\n";
+        AppState.users.forEach(u => {
+            const bal = AppState.leaveBalances[u.username] || { annual: 0, sick: 0 };
+            const status = u.isActive !== false ? 'Active' : 'Inactive';
+            csv += `EMP-${u.username.toUpperCase()},${u.name},${u.dept},${u.role},${status},${bal.annual},${bal.sick}\n`;
+        });
+        const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url; 
+        a.download = `Employee_Database_${new Date().toISOString().slice(0,10)}.csv`;
+        a.click();
+    },
 
+    openEditUser: (username) => {
+        const u = AppState.users.find(x => x.username === username);
+        const bal = AppState.leaveBalances[username] || { annual: 0, sick: 0 };
+        
+        let m = document.getElementById('modal-edit-user');
+        if(!m) {
+            m = document.createElement('div');
+            m.className = 'modal';
+            m.id = 'modal-edit-user';
+            document.body.appendChild(m);
+        }
+        
+        m.innerHTML = `
+            <div class="modal-content">
+                <div class="flex-between" style="margin-bottom:24px;">
+                    <h1 style="margin:0; font-size:20px;">แก้ไขพนักงาน</h1>
+                    <button class="btn-text" style="font-size:20px; color:var(--text-muted);" onclick="App.closeModal('modal-edit-user')">✕</button>
+                </div>
+                <form onsubmit="event.preventDefault(); App.saveEditUser('${username}');">
+                    <label>ชื่อ-นามสกุล</label><input type="text" id="edit-u-name" value="${u.name}" required>
+                    <label>แผนก (Department)</label><input type="text" id="edit-u-dept" value="${u.dept}" required>
+                    <div class="grid-2">
+                        <div>
+                            <label>ระดับสิทธิ์ (Role)</label>
+                            <select id="edit-u-role">
+                                <option value="employee" ${u.role==='employee'?'selected':''}>Employee</option>
+                                <option value="admin" ${u.role==='admin'?'selected':''}>Admin (HR)</option>
+                            </select>
+                        </div>
+                        <div><label>ตั้งรหัสผ่านใหม่</label><input type="text" id="edit-u-pass" value="${u.password}" required></div>
+                    </div>
+                    <div class="grid-2">
+                        <div><label>วันพักร้อนคงเหลือ (วัน)</label><input type="number" step="0.5" id="edit-u-annual" value="${bal.annual}" required></div>
+                        <div><label>วันลาป่วยคงเหลือ (วัน)</label><input type="number" step="0.5" id="edit-u-sick" value="${bal.sick}" required></div>
+                    </div>
+                    <div style="display:flex; gap:12px; margin-top:16px;">
+                        <button type="button" class="btn-outline" style="flex:1;" onclick="App.closeModal('modal-edit-user')">ยกเลิก</button>
+                        <button type="submit" class="btn-primary" style="flex:2;">บันทึกข้อมูล</button>
+                    </div>
+                </form>
+            </div>
+        `;
+        App.openModal('modal-edit-user');
+    },
+
+    saveEditUser: (username) => {
+        const u = AppState.users.find(x => x.username === username);
+        if(u) {
+            u.name = document.getElementById('edit-u-name').value;
+            u.dept = document.getElementById('edit-u-dept').value;
+            u.role = document.getElementById('edit-u-role').value;
+            u.password = document.getElementById('edit-u-pass').value;
+        }
+        
+        if(!AppState.leaveBalances[username]) AppState.leaveBalances[username] = {};
+        AppState.leaveBalances[username].annual = parseFloat(document.getElementById('edit-u-annual').value);
+        AppState.leaveBalances[username].sick = parseFloat(document.getElementById('edit-u-sick').value);
+        
+        DB.save(AppState);
+        App.closeModal('modal-edit-user');
+        App.toast('อัปเดตข้อมูลพนักงานสำเร็จ!', 'success');
+        
+        const navEl = Array.from(document.querySelectorAll('.nav-item')).find(el => el.innerText.includes('Employee') || el.innerText.includes('รายชื่อ'));
+        if(navEl) App.nav('admin-dir', navEl);
+    },
+
+    toggleUserStatus: (username) => {
+        if (username === AppState.currentUser.username) {
+            return App.toast('คุณไม่สามารถระงับบัญชีของตัวเองได้!', 'error');
+        }
+
+        const u = AppState.users.find(x => x.username === username);
+        if(u) {
+            u.isActive = u.isActive === false ? true : false;
+            DB.save(AppState);
+            App.toast(`อัปเดตสถานะบัญชี ${username} เรียบร้อย`, 'success');
+            
+            const navEl = Array.from(document.querySelectorAll('.nav-item')).find(el => el.innerText.includes('Employee') || el.innerText.includes('รายชื่อ'));
+            if(navEl) App.nav('admin-dir', navEl);
+        }
+    },
+
+    changeCalMonth: (dir) => { calMonth += dir; if(calMonth < 0) { calMonth = 11; calYear--; } else if(calMonth > 11) { calMonth = 0; calYear++; } App.renderCalendarGrid(); },
+    renderCalendarGrid: () => {
+        const wrapper = document.getElementById('cal-wrapper'); if(!wrapper) return;
+        const d = new Date(calYear, calMonth, 1);
+        document.getElementById('cal-title').innerText = `${d.toLocaleString('en-US', { month: 'long' })} ${calYear}`;
         const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
         const firstDayIndex = d.getDay();
         const today = new Date();
         const isCurrentMonth = today.getMonth() === calMonth && today.getFullYear() === calYear;
-
         let html = '';
         for(let i=0; i<firstDayIndex; i++) html += `<div class="cal-day empty"></div>`;
-        
         for(let i=1; i<=daysInMonth; i++) {
-            let classes = "cal-day";
-            if(isCurrentMonth && i === today.getDate()) classes += " today";
-            
-            // Mock Events based on day number to look realistic across months
+            let classes = "cal-day"; if(isCurrentMonth && i === today.getDate()) classes += " today";
             let eventHTML = "";
             if(i === 10) eventHTML = `<span class="event-badge" style="background:#fee2e2; color:#b91c1c;">Public Holiday</span>`;
             if(i === 25) eventHTML = `<span class="event-badge">Payroll Cut-off</span>`;
-            
             html += `<div class="${classes}"><div style="font-weight:bold;">${i}</div>${eventHTML}</div>`;
         }
         wrapper.innerHTML = html;
     },
-
-    // --- Admin Settings Logic ---
     saveSettings: () => {
         AppState.settings.companyName = document.getElementById('set-company').value;
         AppState.settings.leaveQuota = parseInt(document.getElementById('set-quota').value);
-        DB.save(AppState); App.toast('System settings updated');
+        AppState.settings.broadcast = document.getElementById('set-broadcast').value; 
+        DB.save(AppState); 
+        App.toast('System settings updated');
     },
-
-    // --- Standard Logic (Clock, Leave, OT) ---
     clock: () => {
         const u = AppState.currentUser.username, d = new Date().toLocaleDateString('en-CA'), loc = document.getElementById('work-location').value;
         if (!AppState.dailyClock[u] || AppState.dailyClock[u].date !== d) AppState.dailyClock[u] = { date: d, status: 'out', in: null };
-        
         let c = AppState.dailyClock[u];
-        if (c.status === 'out') {
-            c.status = 'in'; c.in = Date.now(); c.loc = loc; 
-            App.toast('Clocked in successfully');
-        } else {
+        if (c.status === 'out') { c.status = 'in'; c.in = Date.now(); c.loc = loc; App.toast('Clocked in successfully'); } 
+        else {
             const hrs = ((Date.now() - c.in) / 3600000).toFixed(2);
             AppState.timeLogs.unshift({ u: u, d: d, in: new Date(c.in).toLocaleTimeString('en-US',{hour:'2-digit', minute:'2-digit'}), out: new Date().toLocaleTimeString('en-US',{hour:'2-digit', minute:'2-digit'}), hrs, loc: c.loc });
-            c.status = 'out'; c.in = null;
-            App.toast(`Clocked out. Total: ${hrs} hrs`);
+            c.status = 'out'; c.in = null; App.toast(`Clocked out. Total: ${hrs} hrs`);
         }
         DB.save(AppState); App.updateClock();
     },
-
     updateClock: () => {
         const btn = document.getElementById('btn-clock'), st = document.getElementById('status-clock'), sel = document.getElementById('work-location');
-        if(!btn) return;
-        let c = AppState.dailyClock[AppState.currentUser.username];
+        if(!btn) return; let c = AppState.dailyClock[AppState.currentUser.username];
         if (c && c.status === 'in' && c.date === new Date().toLocaleDateString('en-CA')) {
             sel.disabled = true; btn.innerText = `⏹️ ${t('clock_btn_out')}`; btn.classList.replace('btn-primary', 'btn-danger');
             st.innerHTML = `<span style="color:var(--success); font-weight:600;">🟢 Active (${c.loc})</span><br><span class="text-muted">Since ${new Date(c.in).toLocaleTimeString('en-US',{hour:'2-digit', minute:'2-digit'})}</span>`;
-        } else {
-            sel.disabled = false; btn.innerText = `⏳ ${t('clock_btn_in')}`; btn.classList.replace('btn-danger', 'btn-primary');
-            st.innerHTML = `<span class="text-muted">Not clocked in</span>`;
-        }
+        } else { sel.disabled = false; btn.innerText = `⏳ ${t('clock_btn_in')}`; btn.classList.replace('btn-danger', 'btn-primary'); st.innerHTML = `<span class="text-muted">Not clocked in</span>`; }
     },
-
     submitLeave: () => {
         const u = AppState.currentUser.username, k = document.getElementById('lv-type').value.includes('Annual') ? 'annual' : 'sick';
         let days = document.getElementById('lv-format').value === 'hourly' ? 0.125 : 1; 
+        if(!AppState.leaveBalances[u]) AppState.leaveBalances[u] = { annual: AppState.settings.leaveQuota, sick: 30 };
         if(AppState.leaveBalances[u][k] < days) return App.toast('Insufficient balance', 'error');
         AppState.leaveBalances[u][k] -= days;
         AppState.requests.unshift({ id: Date.now(), type: 'Leave', u: u, name: AppState.currentUser.name, detail: document.getElementById('lv-type').value, reason: document.getElementById('lv-reason').value, status: 'Pending' });
         DB.save(AppState); App.closeModal('modal-leave'); App.toast('Request Submitted'); App.nav('time', document.querySelectorAll('.nav-item')[1]); 
     },
-
     submitOT: () => {
         AppState.requests.unshift({ id: Date.now(), type: 'OT', u: AppState.currentUser.username, name: AppState.currentUser.name, detail: document.getElementById('ot-hours').value + ' Hrs', reason: document.getElementById('ot-reason').value, status: 'Pending' });
         DB.save(AppState); App.closeModal('modal-ot'); App.toast('OT Requested'); App.nav('time', document.querySelectorAll('.nav-item')[1]);
     },
-
     actionReq: (id, stat) => {
         const r = AppState.requests.find(x => x.id === id);
-        if(r) {
-            r.status = stat; DB.save(AppState);
-            App.toast(`Marked as ${stat}`); App.nav('admin-approve', document.querySelectorAll('.nav-item')[1]); App.updateBadge();
-            Notif.push(r.u, `Manager ${stat} your ${r.type} request.`);
-        }
+        if(r) { r.status = stat; DB.save(AppState); App.toast(`Marked as ${stat}`); App.nav('admin-approve'); App.updateBadge(); Notif.push(r.u, `Manager ${stat} your ${r.type} request.`); }
     },
-
     renderChart: () => {
         if(chartInst) chartInst.destroy();
-        const bal = AppState.leaveBalances[AppState.currentUser.username].annual;
+        const u = AppState.currentUser.username;
+        const bal = AppState.leaveBalances[u] ? AppState.leaveBalances[u].annual : 0;
         chartInst = new Chart(document.getElementById('userChart'), { type: 'doughnut', data: { labels: ['Used', 'Remaining'], datasets: [{ data: [AppState.settings.leaveQuota-bal, bal], backgroundColor: ['#e2e8f0', '#2563eb'], borderWidth: 0 }] }, options: { cutout: '80%', plugins: { legend: { display: false } } } });
     },
-
-    renderAdminCharts: () => {
+    renderAdminDashChart: () => {
         if(chartInst) chartInst.destroy();
-        chartInst = new Chart(document.getElementById('adminChart'), { type: 'bar', data: { labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'], datasets: [{ label: 'On-Time', data: [45, 48, 44, 46, 40], backgroundColor: '#059669' }, { label: 'Late', data: [5, 2, 6, 4, 10], backgroundColor: '#dc2626' }]}, options: { maintainAspectRatio: false, scales: { y: { stacked: true }, x: { stacked: true } } } });
-    },
+        const ctx = document.getElementById('adminDashChart');
+        if (!ctx) return; 
 
+        chartInst = new Chart(ctx, { 
+            type: 'bar', 
+            data: {
+                labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'], 
+                datasets: [
+                    { label: 'Present (มาทำงาน)', data: [12, 15, 14, 13, 10], backgroundColor: '#059669' },
+                    { label: 'Leave (ลา)', data: [2, 0, 1, 1, 4], backgroundColor: '#d97706' },
+                    { label: 'WFH (ทำงานที่บ้าน)', data: [1, 0, 0, 1, 1], backgroundColor: '#2563eb' }
+                ]
+            }, 
+            options: { 
+                maintainAspectRatio: false, 
+                scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true } },
+                plugins: { legend: { position: 'top' } }
+            } 
+        });
+    },
     genSlip: () => {
-        document.getElementById('printable-area').innerHTML = `
-            <div style="background:white; padding:40px; border:1px solid var(--border); border-radius: var(--radius); font-family:monospace; max-width:800px; margin:0 auto; box-shadow: var(--shadow-sm);">
-                <h2 style="text-align:center; color:var(--primary); font-size: 20px;">${AppState.settings.companyName}</h2>
-                <p style="text-align:center; color:var(--text-muted);">Secure E-Payslip - ${document.getElementById('slip-month').value}</p>
-                <hr style="margin:24px 0; border:0; border-top:1px dashed #cbd5e1;">
-                <div class="grid-2" style="font-size: 14px;">
-                    <div>Employee Name:<br><b style="font-size:16px;">${AppState.currentUser.name}</b></div>
-                    <div style="text-align:right">Net Pay Amount:<br><b style="font-size:24px; color:var(--primary);">฿ 53,237.32</b></div>
-                </div>
-            </div>`;
+        const wrapper = document.getElementById('printable-area'); if(!wrapper) return;
+        const slip = App.getSalary();
+        wrapper.innerHTML = `<div style="background:white; padding:40px; border:1px solid var(--border); border-radius:var(--radius); font-family:'Kanit',monospace; max-width:800px; margin:0 auto; box-shadow:var(--shadow);">
+            <div style="text-align:center; margin-bottom:30px;"><h2 style="font-size:24px; color:var(--primary); margin:0;">${AppState.settings.companyName}</h2><p style="color:var(--text-muted); margin:5px 0 0 0;"> Secure E-Payslip - ${document.getElementById('slip-month').value}</p></div>
+            <div style="background:var(--bg-main); padding:15px; border-radius:var(--radius-sm); margin-bottom:25px; display:flex; justify-content:space-between; font-size:14px;"><div>${t('prof')}: <b>${AppState.currentUser.name}</b> (EMP-${AppState.currentUser.username.toUpperCase()})</div><div style="text-align:right">DEPT: <b>${AppState.currentUser.dept}</b></div></div>
+            <div class="grid-2" style="gap:30px;">
+                <div><h3 style="font-size:16px; color:var(--success); border-bottom:2px solid var(--success); padding-bottom:5px; margin-bottom:15px;">รายรับ (Earnings)</h3><div class="flex-between" style="padding:8px 0;"><span>${t('slip_base')}</span><b>${slip.base.toLocaleString(undefined, {minimumFractionDigits: 2})}</b></div><div class="flex-between" style="padding:8px 0;"><span>${t('slip_ot')}</span><b>${slip.ot.toLocaleString(undefined, {minimumFractionDigits: 2})}</b></div><div class="flex-between" style="padding:8px 0; border-bottom:1px solid var(--border);"><span>${t('slip_allow')}</span><b>${slip.allow.toLocaleString(undefined, {minimumFractionDigits: 2})}</b></div><div class="flex-between" style="padding:12px 0; font-weight:700; color:var(--primary);"><span>${t('slip_total_earn')}</span><b style="font-size:16px;">฿ ${slip.earn.toLocaleString(undefined, {minimumFractionDigits: 2})}</b></div></div>
+                <div><h3 style="font-size:16px; color:var(--danger); border-bottom:2px solid var(--danger); padding-bottom:5px; margin-bottom:15px;">รายจ่าย (Deductions)</h3><div class="flex-between" style="padding:8px 0;"><span>${t('slip_sso')}</span><b>${slip.sso.toLocaleString(undefined, {minimumFractionDigits: 2})}</b></div><div class="flex-between" style="padding:8px 0;"><span>${t('slip_tax')}</span><b>${slip.tax.toLocaleString(undefined, {minimumFractionDigits: 2})}</b></div><div class="flex-between" style="padding:8px 0; border-bottom:1px solid var(--border); color:var(--danger);"><span>${t('slip_absent')}</span><b>${slip.absent.toLocaleString(undefined, {minimumFractionDigits: 2})}</b></div><div class="flex-between" style="padding:12px 0; font-weight:700; color:var(--primary);"><span>${t('slip_total_deduct')}</span><b style="font-size:16px;">฿ ${slip.deduct.toLocaleString(undefined, {minimumFractionDigits: 2})}</b></div></div>
+            </div>
+            <div style="margin-top:40px; padding:20px; background:linear-gradient(135deg, var(--primary), #1e3a8a); color:white; border-radius:var(--radius-sm); text-align:right;"><div style="font-size:14px; opacity:0.8;">${t('slip_net')} (Net Pay)</div><div style="font-size:36px; font-weight:700; letter-spacing:-1px;">฿ ${slip.net.toLocaleString(undefined, {minimumFractionDigits: 2})}</div></div>
+            <div style="text-align:center; margin-top:30px; font-size:12px; color:var(--text-muted); border-top:1px dashed var(--border); padding-top:15px;">This is a computer-generated document. No signature required.</div>
+        </div>`;
     },
-
-    toggleSal: () => {
-        isSalaryVisible = !isSalaryVisible;
-        document.getElementById('salary-val').classList.toggle('masked');
-        document.getElementById('salary-btn').innerHTML = isSalaryVisible ? `🔒 ${t('hide')}` : `👁️ ${t('show')}`;
-    },
-
+    toggleSal: () => { isSalaryVisible = !isSalaryVisible; document.getElementById('salary-val').classList.toggle('masked'); document.getElementById('salary-btn').innerHTML = isSalaryVisible ? `🔒 ${t('hide')}` : `👁️ ${t('show')}`; },
     switchTab: (id, btn) => { document.querySelectorAll('.tab-btn').forEach(x=>x.classList.remove('active')); btn.classList.add('active'); document.querySelectorAll('.tab-content').forEach(x=>x.classList.remove('active')); document.getElementById(id).classList.add('active'); },
     openModal: (id) => document.getElementById(id).classList.add('show'),
     closeModal: (id) => document.getElementById(id).classList.remove('show'),
@@ -389,271 +493,132 @@ const App = {
 // --- 5. VIEWS ---
 const Views = {
     'home': () => {
-        const bal = AppState.leaveBalances[AppState.currentUser.username].annual;
-        return `
-        <div style="margin-bottom: 32px; animation: fadeUp 0.4s ease-out;">
-            <div style="color:var(--accent); font-size:13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">${t('welcome')}</div>
-            <h1 style="margin:0; font-size:28px;">${AppState.currentUser.name}</h1>
-        </div>
-        
-        <div class="grid-dash">
-            <div>
-                <div class="card" style="background: linear-gradient(135deg, var(--primary), #1e3a8a); color: white; margin-bottom: 24px; border:none; box-shadow: 0 10px 25px -5px rgba(30, 58, 138, 0.4);">
-                    <div class="flex-between">
-                        <h2 style="color: #93c5fd; margin:0; font-weight: 500;">${t('salary_title')}</h2>
-                        <button id="salary-btn" class="btn-toggle-view" onclick="App.toggleSal()">👁️ ${t('show')}</button>
-                    </div>
-                    <div class="salary-container">
-                        <span id="salary-val" class="salary-value masked">฿ 53,237.32</span>
-                    </div>
-                </div>
-
-                <div class="card" style="margin-bottom: 24px;">
-                    <h2 style="color: var(--accent); display:flex; align-items:center; gap:8px;">${t('clock_title')}</h2>
-                    <select id="work-location" style="margin-bottom: 16px;">
-                        <option value="Office">${t('loc_office')}</option><option value="WFH">${t('loc_wfh')}</option>
-                    </select>
-                    <div id="status-clock" style="margin-bottom: 20px; font-size: 14px; padding: 12px; background: var(--bg-main); border-radius: var(--radius-sm); border: 1px dashed var(--border);">-</div>
-                    <button id="btn-clock" class="btn-primary" onclick="App.clock()" style="padding: 14px; width:100%; font-size: 14px;">${t('clock_btn_in')}</button>
-                </div>
-            </div>
-            <div class="card" style="display:flex; flex-direction:column; align-items:center; justify-content: center;">
-                <h2 style="margin-bottom: 24px;">${t('leave_bal')}</h2>
-                <div style="position:relative; width:160px; height:160px; margin-bottom: 24px;">
-                    <canvas id="userChart"></canvas>
-                    <div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); text-align:center;">
-                        <div style="font-size:32px; font-weight:700; color:var(--primary); line-height:1;">${bal}</div>
-                        <div style="font-size:11px; color:var(--text-muted); font-weight: 600; margin-top: 4px;">DAYS</div>
-                    </div>
-                </div>
-                <button class="btn-outline" style="width: 100%; color: var(--accent); border-color: var(--accent);" onclick="App.openModal('modal-leave')">${t('req_lv')}</button>
-            </div>
-        </div>`;
-    },
-    
-    'time': () => {
         const u = AppState.currentUser.username;
-        const logs = AppState.timeLogs.filter(x=>x.u===u), reqs = AppState.requests.filter(x=>x.u===u);
+        const bal = AppState.leaveBalances[u] ? AppState.leaveBalances[u].annual : 0;
+        const sal = App.getSalary(); 
+        const broadcastMsg = AppState.settings.broadcast ? 
+            `<div style="background: #fffbeb; border-left: 4px solid #f59e0b; padding: 12px 16px; margin-bottom: 24px; border-radius: var(--radius-sm); color: #b45309; display: flex; gap: 12px; align-items: flex-start; box-shadow: var(--shadow-sm);"><div style="font-size: 20px;">📢</div><div><strong style="display:block; margin-bottom:4px;">ประกาศจากบริษัท (Announcement)</strong>${AppState.settings.broadcast}</div></div>` : '';
+
         return `
-        <div class="flex-between" style="margin-bottom: 24px; animation: fadeUp 0.4s ease-out;">
-            <h1 style="margin:0;">${t('time')}</h1>
-            <div style="display:flex; gap:12px;">
-                <button class="btn-outline" onclick="App.openModal('modal-ot')">${t('req_ot')}</button>
-                <button class="btn-primary" onclick="App.openModal('modal-leave')">${t('req_lv')}</button>
-            </div>
-        </div>
-        <div class="card" style="padding-top:16px;">
-            <div class="ui-tabs">
-                <button class="tab-btn active" onclick="App.switchTab('t1', this)">${t('tab_log')}</button>
-                <button class="tab-btn" onclick="App.switchTab('t2', this)">${t('tab_lv')} / OT</button>
-            </div>
-            <div id="t1" class="tab-content active table-wrapper">
-                <table>
-                    <thead><tr><th>Date</th><th>Location</th><th>In</th><th>Out</th><th>Hours</th></tr></thead>
-                    <tbody>${logs.map(l=>`<tr><td><b style="color:var(--primary);">${l.d}</b></td><td><span class="badge" style="background:white; border: 1px solid var(--border); color:var(--text-muted);">${l.loc}</span></td><td>${l.in}</td><td>${l.out}</td><td><b style="color:var(--accent);">${l.hrs}</b></td></tr>`).join('') || `<tr><td colspan="5" class="empty-state">${t('no_data')}</td></tr>`}</tbody>
-                </table>
-            </div>
-            <div id="t2" class="tab-content table-wrapper">
-                <table>
-                    <thead><tr><th>Type</th><th>Details</th><th>Status</th></tr></thead>
-                    <tbody>${reqs.map(r=>`<tr><td><span class="badge" style="background:#f1f5f9; border:1px solid var(--border); color:var(--primary);">${r.type}</span></td><td><b>${r.detail}</b><br><span style="font-size:12px; color:var(--text-muted);">${r.reason}</span></td><td><span class="badge bg-${r.status.toLowerCase()}">${r.status}</span></td></tr>`).join('') || `<tr><td colspan="3" class="empty-state">${t('no_data')}</td></tr>`}</tbody>
-                </table>
-            </div>
+        <div style="margin-bottom: 32px; animation: fadeUp 0.4s ease-out;"><div style="color:var(--accent); font-size:13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">${t('welcome')}</div><h1 style="margin:0; font-size:28px;">${AppState.currentUser.name}</h1></div>
+        ${broadcastMsg} 
+        <div class="grid-dash">
+            <div><div class="card" style="background: linear-gradient(135deg, var(--primary), #1e3a8a); color: white; margin-bottom: 24px; border:none; box-shadow: 0 10px 25px -5px rgba(30, 58, 138, 0.4);"><div class="flex-between"><h2 style="color: #93c5fd; margin:0; font-weight: 500;">${t('salary_title')}</h2><button id="salary-btn" class="btn-toggle-view" onclick="App.toggleSal()">👁️ ${t('show')}</button></div><div class="salary-container"><span id="salary-val" class="salary-value masked">฿ ${sal.net.toLocaleString(undefined, {minimumFractionDigits: 2})}</span></div></div>
+            <div class="card" style="margin-bottom: 24px;"><h2 style="color: var(--accent); display:flex; align-items:center; gap:8px;">${t('clock_title')}</h2><select id="work-location" style="margin-bottom: 16px;"><option value="Office">${t('loc_office')}</option><option value="WFH">${t('loc_wfh')}</option></select><div id="status-clock" style="margin-bottom: 20px; font-size: 14px; padding: 12px; background: var(--bg-main); border-radius: var(--radius-sm); border: 1px dashed var(--border);">-</div><button id="btn-clock" class="btn-primary" onclick="App.clock()" style="padding: 14px; width:100%; font-size: 14px;">${t('clock_btn_in')}</button></div></div>
+            <div class="card" style="display:flex; flex-direction:column; align-items:center; justify-content: center;"><h2 style="margin-bottom: 24px;">${t('leave_bal')}</h2><div style="position:relative; width:160px; height:160px; margin-bottom: 24px;"><canvas id="userChart"></canvas><div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); text-align:center;"><div style="font-size:32px; font-weight:700; color:var(--primary); line-height:1;">${bal}</div><div style="font-size:11px; color:var(--text-muted); font-weight: 600; margin-top: 4px;">DAYS</div></div></div><button class="btn-outline" style="width: 100%; color: var(--accent); border-color: var(--accent);" onclick="App.openModal('modal-leave')">${t('req_lv')}</button></div>
         </div>`;
     },
-    
+    'time': () => {
+        const u = AppState.currentUser.username, logs = AppState.timeLogs.filter(x=>x.u===u), reqs = AppState.requests.filter(x=>x.u===u);
+        return `<div class="flex-between" style="margin-bottom: 24px; animation: fadeUp 0.4s ease-out;"><h1 style="margin:0;">${t('time')}</h1><div style="display:flex; gap:12px;"><button class="btn-outline" onclick="App.openModal('modal-ot')">${t('req_ot')}</button><button class="btn-primary" onclick="App.openModal('modal-leave')">${t('req_lv')}</button></div></div>
+        <div class="card" style="padding-top:16px;"><div class="ui-tabs"><button class="tab-btn active" onclick="App.switchTab('t1', this)">${t('tab_log')}</button><button class="tab-btn" onclick="App.switchTab('t2', this)">${t('tab_lv')} / OT</button></div>
+            <div id="t1" class="tab-content active table-wrapper"><table><thead><tr><th>Date</th><th>Location</th><th>In</th><th>Out</th><th>Hours</th></tr></thead><tbody>${logs.map(l=>`<tr><td><b style="color:var(--primary);">${l.d}</b></td><td><span class="badge" style="background:white; border: 1px solid var(--border); color:var(--text-muted);">${l.loc}</span></td><td>${l.in}</td><td>${l.out}</td><td><b style="color:var(--accent);">${l.hrs}</b></td></tr>`).join('') || `<tr><td colspan="5" class="empty-state">${t('no_data')}</td></tr>`}</tbody></table></div>
+            <div id="t2" class="tab-content table-wrapper"><table><thead><tr><th>Type</th><th>Details</th><th>Status</th></tr></thead><tbody>${reqs.map(r=>`<tr><td><span class="badge" style="background:#f1f5f9; border:1px solid var(--border); color:var(--primary);">${r.type}</span></td><td><b>${r.detail}</b><br><span style="font-size:12px; color:var(--text-muted);">${r.reason}</span></td><td><span class="badge bg-${r.status.toLowerCase()}">${r.status}</span></td></tr>`).join('') || `<tr><td colspan="3" class="empty-state">${t('no_data')}</td></tr>`}</tbody></table></div>
+        </div>`;
+    },
     'payslip': () => `
         <div class="flex-between no-print" style="margin-bottom: 24px; animation: fadeUp 0.4s ease-out;">
             <h1 style="margin:0;">${t('slip')}</h1>
             <div style="display:flex; gap:12px;">
-                <select id="slip-month" onchange="App.genSlip()" style="margin:0; width:auto; font-weight:500;"><option value="2026-03">March 2026</option></select>
+                <select id="slip-month" onchange="App.genSlip()" style="margin:0; width:auto; font-weight:500;">
+                    ${App.getMonthOptions()}
+                </select>
                 <button class="btn-primary" onclick="window.print()">Print PDF</button>
             </div>
         </div>
         <div id="printable-area"></div>
     `,
-
-    'cal': () => `
-        <div style="animation: fadeUp 0.4s ease-out;">
-            <div class="calendar-nav">
-                <h1 style="margin:0;">${t('cal')} <span id="cal-title" style="color:var(--accent); font-weight:600; font-size:18px; margin-left:10px;"></span></h1>
-                <div style="display:flex; gap:8px;">
-                    <button class="cal-btn" onclick="App.changeCalMonth(-1)">⬅</button>
-                    <button class="cal-btn" onclick="App.changeCalMonth(1)">➡</button>
-                </div>
-            </div>
-            <div class="card">
-                <div class="calendar-grid">
-                    <div class="cal-header">SUN</div><div class="cal-header">MON</div><div class="cal-header">TUE</div><div class="cal-header">WED</div><div class="cal-header">THU</div><div class="cal-header">FRI</div><div class="cal-header">SAT</div>
-                </div>
-                <div class="calendar-grid" id="cal-wrapper"></div>
-            </div>
-        </div>
-    `,
-
+    'cal': () => `<div style="animation: fadeUp 0.4s ease-out;"><div class="calendar-nav"><h1 style="margin:0;">${t('cal')} <span id="cal-title" style="color:var(--accent); font-weight:600; font-size:18px; margin-left:10px;"></span></h1><div style="display:flex; gap:8px;"><button class="cal-btn" onclick="App.changeCalMonth(-1)">⬅</button><button class="cal-btn" onclick="App.changeCalMonth(1)">➡</button></div></div><div class="card"><div class="calendar-grid"><div class="cal-header">SUN</div><div class="cal-header">MON</div><div class="cal-header">TUE</div><div class="cal-header">WED</div><div class="cal-header">THU</div><div class="cal-header">FRI</div><div class="cal-header">SAT</div></div><div class="calendar-grid" id="cal-wrapper"></div></div></div>`,
     'doc': () => {
-        const docs = [
-            { name: 'Employee_Handbook_2026', title: 'Employee Handbook (คู่มือพนักงาน)', size: '2.4 MB', date: 'Jan 10, 2026' },
-            { name: 'WFH_Policy', title: 'Remote Work Policy (ระเบียบ WFH)', size: '1.1 MB', date: 'Feb 15, 2026' },
-            { name: 'Insurance_Claims', title: 'Health Insurance Claims (การเบิกประกัน)', size: '3.5 MB', date: 'Mar 01, 2026' }
-        ];
-        return `
-        <div style="animation: fadeUp 0.4s ease-out;">
-            <h1 style="margin-bottom:24px;">${t('doc')}</h1>
-            <div class="card">
-                <h2 style="margin-bottom: 16px;">Standard Operating Procedures (SOP)</h2>
-                ${docs.map(d => `
-                    <div class="policy-item">
-                        <div style="display:flex; align-items:center; gap:16px;">
-                            <div style="width:40px; height:40px; background:var(--accent-light); color:var(--accent); border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:20px;">📄</div>
-                            <div>
-                                <div style="font-weight:600; color:var(--primary);">${d.title}</div>
-                                <div style="font-size:12px; color:var(--text-muted);">Updated: ${d.date} • ${d.size}</div>
-                            </div>
-                        </div>
-                        <button class="btn-outline" style="width:auto; font-size:12px;" onclick="App.downloadFile('${d.name}')">Download</button>
-                    </div>
-                `).join('')}
-            </div>
-        </div>`;
+        const docs = [{ name: 'Employee_Handbook_2026', title: 'Employee Handbook (คู่มือพนักงาน)', size: '2.4 MB', date: 'Jan 10, 2026' },{ name: 'WFH_Policy', title: 'Remote Work Policy (ระเบียบ WFH)', size: '1.1 MB', date: 'Feb 15, 2026' },{ name: 'Insurance_Claims', title: 'Health Insurance Claims (การเบิกประกัน)', size: '3.5 MB', date: 'Mar 01, 2026' }];
+        return `<div style="animation: fadeUp 0.4s ease-out;"><h1 style="margin-bottom:24px;">${t('doc')}</h1><div class="card"><h2 style="margin-bottom: 16px;">Standard Operating Procedures (SOP)</h2>${docs.map(d => `<div class="policy-item"><div style="display:flex; align-items:center; gap:16px;"><div style="width:40px; height:40px; background:var(--accent-light); color:var(--accent); border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:20px;">📄</div><div><div style="font-weight:600; color:var(--primary);">${d.title}</div><div style="font-size:12px; color:var(--text-muted);">Updated: ${d.date} • ${d.size}</div></div></div><button class="btn-outline" style="width:auto; font-size:12px;" onclick="App.downloadFile('${d.name}')">Download</button></div>`).join('')}</div></div>`;
     },
-
     'prof': () => {
-        const p = AppState.profile;
-        return `
-        <div style="animation: fadeUp 0.4s ease-out;">
-            <h1 style="margin-bottom:24px;">${t('prof')}</h1>
-            <div class="grid-dash">
-                <div class="card">
-                    <h2 style="margin-bottom: 24px; border-bottom: 1px solid var(--border); padding-bottom: 12px;">Personal Information</h2>
-                    <div class="grid-2">
-                        <div><label>Full Name</label><input type="text" value="${AppState.currentUser.name}" disabled style="background:#f1f5f9; color:#94a3b8;"></div>
-                        <div><label>Employee ID</label><input type="text" value="EMP-${AppState.currentUser.username.toUpperCase()}" disabled style="background:#f1f5f9; color:#94a3b8;"></div>
-                        <div><label>Department</label><input type="text" value="${AppState.currentUser.dept}" disabled style="background:#f1f5f9; color:#94a3b8;"></div>
-                        <div><label>Start Date</label><input type="text" value="${p.startDate}" disabled style="background:#f1f5f9; color:#94a3b8;"></div>
-                        <div><label>Email Address</label><input type="email" id="prof-email" value="${p.email}"></div>
-                        <div><label>Contact Number</label><input type="text" id="prof-phone" value="${p.phone}"></div>
-                    </div>
-                    <div style="text-align:right; margin-top:16px;">
-                        <button class="btn-primary" style="width:auto; padding: 12px 24px;" onclick="App.saveProfile()">Save Changes</button>
-                    </div>
-                </div>
-                <div class="card" style="text-align:center;">
-                    <img src="${p.avatar || `https://ui-avatars.com/api/?name=${AppState.currentUser.name}&background=eff6ff&color=2563eb&size=150`}" id="prof-avatar-img" style="border-radius:50%; border: 4px solid var(--bg-main); margin-bottom: 16px; width:150px; height:150px; object-fit:cover;">
-                    <h2 style="margin:0;">${AppState.currentUser.name}</h2>
-                    <p class="text-muted" style="margin-bottom:20px;">${AppState.currentUser.dept}</p>
-                    
-                    <input type="file" id="avatar-upload" style="display:none;" accept="image/*" onchange="App.handleAvatarUpload(event)">
-                    <button class="btn-outline" onclick="document.getElementById('avatar-upload').click()">Upload New Photo</button>
-                </div>
-            </div>
-        </div>`;
+        const u = AppState.currentUser.username;
+        const p = AppState.profiles[u] || { email: '', phone: '', startDate: '' };
+        return `<div style="animation: fadeUp 0.4s ease-out;"><h1 style="margin-bottom:24px;">${t('prof')}</h1><div class="grid-dash"><div class="card"><h2 style="margin-bottom: 24px; border-bottom: 1px solid var(--border); padding-bottom: 12px;">Personal Information</h2><div class="grid-2"><div><label>Full Name</label><input type="text" value="${AppState.currentUser.name}" disabled style="background:#f1f5f9; color:#94a3b8;"></div><div><label>Employee ID</label><input type="text" value="EMP-${u.toUpperCase()}" disabled style="background:#f1f5f9; color:#94a3b8;"></div><div><label>Department</label><input type="text" value="${AppState.currentUser.dept}" disabled style="background:#f1f5f9; color:#94a3b8;"></div><div><label>Start Date</label><input type="text" value="${p.startDate}" disabled style="background:#f1f5f9; color:#94a3b8;"></div><div><label>Email Address</label><input type="email" id="prof-email" value="${p.email}"></div><div><label>Contact Number</label><input type="text" id="prof-phone" value="${p.phone}"></div></div><div style="text-align:right; margin-top:16px;"><button class="btn-primary" style="width:auto; padding: 12px 24px;" onclick="App.saveProfile()">Save Changes</button></div></div><div class="card" style="text-align:center;"><img src="${p.avatar || `https://ui-avatars.com/api/?name=${AppState.currentUser.name}&background=eff6ff&color=2563eb&size=150`}" id="prof-avatar-img" style="border-radius:50%; border: 4px solid var(--bg-main); margin-bottom: 16px; width:150px; height:150px; object-fit:cover;"><h2 style="margin:0;">${AppState.currentUser.name}</h2><p class="text-muted" style="margin-bottom:20px;">${AppState.currentUser.dept}</p><input type="file" id="avatar-upload" style="display:none;" accept="image/*" onchange="App.handleAvatarUpload(event)"><button class="btn-outline" onclick="document.getElementById('avatar-upload').click()">Upload New Photo</button></div></div></div>`;
     },
 
-    // --- Admin Views ---
-    'admin-dash': () => `
-        <div style="animation: fadeUp 0.4s ease-out;">
-            <h1 style="margin-bottom:24px;">${t('admin_dash')}</h1>
-            <div class="grid-3" style="margin-bottom: 24px;">
-                <div class="card" style="border-top: 4px solid var(--primary);"><h2>Total Employees</h2><div class="stat-value">${AppState.users.length}</div></div>
-                <div class="card" style="border-top: 4px solid var(--warning);"><h2>Pending Approvals</h2><div class="stat-value" style="color:var(--warning);">${AppState.requests.filter(r=>r.status==='Pending').length}</div></div>
-                <div class="card" style="border-top: 4px solid var(--success);"><h2>Active Today</h2><div class="stat-value" style="color:var(--success);">1</div></div>
-            </div>
-            <div class="card"><h2 style="margin-bottom:16px;">Weekly Attendance</h2><div style="height: 300px; width: 100%;"><canvas id="adminChart"></canvas></div></div>
-        </div>
-    `,
+    'admin-dash': () => {
+        const todayStr = new Date().toLocaleDateString('en-CA');
+        let activeCount = 0;
+        for (const user in AppState.dailyClock) { if (AppState.dailyClock[user].date === todayStr && AppState.dailyClock[user].status === 'in') activeCount++; }
+        return `<div style="animation: fadeUp 0.4s ease-out;"><h1 style="margin-bottom:24px;">${t('admin_dash')}</h1><div class="grid-3" style="margin-bottom: 24px;"><div class="card" style="border-top: 4px solid var(--primary);"><h2>Total Employees</h2><div class="stat-value">${AppState.users.length}</div></div><div class="card" style="border-top: 4px solid var(--warning);"><h2>Pending Approvals</h2><div class="stat-value" style="color:var(--warning);">${AppState.requests.filter(r=>r.status==='Pending').length}</div></div><div class="card" style="border-top: 4px solid var(--success);"><h2>Active Today</h2><div class="stat-value" style="color:var(--success);">${activeCount}</div></div></div><div class="card"><h2 style="margin-bottom:16px;">Weekly Attendance Overview</h2><div style="height: 300px; width: 100%; position: relative;"><canvas id="adminDashChart"></canvas></div></div></div>`;
+    },
     'admin-approve': () => {
         const p = AppState.requests.filter(r=>r.status==='Pending');
-        return `
-        <div style="animation: fadeUp 0.4s ease-out;">
-            <h1 style="margin-bottom:24px;">${t('admin_appr')}</h1>
-            <div class="card table-wrapper" style="padding: 0;">
-                <table style="margin:0;">
-                    <thead><tr><th>Employee</th><th>Request Info</th><th style="text-align:right;">Actions</th></tr></thead>
-                    <tbody>${p.map(r=>`
-                        <tr>
-                            <td><b style="font-size:14px; color:var(--primary);">${r.name}</b><br><span style="font-size:12px; color:var(--text-muted);">EMP-${r.u.toUpperCase()}</span></td>
-                            <td><span class="badge" style="background:#f1f5f9; margin-bottom:4px;">${r.type}</span> <b style="font-size:13px;">${r.detail}</b><br><span style="font-size:12px; color:var(--text-muted);">${r.reason}</span></td>
-                            <td style="text-align:right;">
-                                <button class="btn-primary" style="background:var(--success); width:auto; padding:6px 14px; margin-right:4px;" onclick="App.actionReq(${r.id}, 'Approved')">${t('approve')}</button> 
-                                <button class="btn-primary" style="background:var(--danger); width:auto; padding:6px 14px;" onclick="App.actionReq(${r.id}, 'Rejected')">${t('reject')}</button>
-                            </td>
-                        </tr>
-                    `).join('') || `<tr><td colspan="3" class="empty-state">🎉 All caught up! No pending requests.</td></tr>`}</tbody>
-                </table>
-            </div>
-        </div>`;
+        return `<div style="animation: fadeUp 0.4s ease-out;"><h1 style="margin-bottom:24px;">${t('admin_appr')}</h1><div class="card table-wrapper" style="padding: 0;"><table style="margin:0;"><thead><tr><th>Employee</th><th>Request Info</th><th style="text-align:right;">Actions</th></tr></thead><tbody>${p.map(r=>`<tr><td><b style="font-size:14px; color:var(--primary);">${r.name}</b><br><span style="font-size:12px; color:var(--text-muted);">EMP-${r.u.toUpperCase()}</span></td><td><span class="badge" style="background:#f1f5f9; margin-bottom:4px;">${r.type}</span> <b style="font-size:13px;">${r.detail}</b><br><span style="font-size:12px; color:var(--text-muted);">${r.reason}</span></td><td style="text-align:right;"><button class="btn-primary" style="background:var(--success); width:auto; padding:6px 14px; margin-right:4px;" onclick="App.actionReq(${r.id}, 'Approved')">${t('approve')}</button> <button class="btn-primary" style="background:var(--danger); width:auto; padding:6px 14px;" onclick="App.actionReq(${r.id}, 'Rejected')">${t('reject')}</button></td></tr>`).join('') || `<tr><td colspan="3" class="empty-state">🎉 All caught up! No pending requests.</td></tr>`}</tbody></table></div></div>`;
     },
     'admin-dir': () => `
         <div style="animation: fadeUp 0.4s ease-out;">
             <div class="flex-between" style="margin-bottom:24px;">
                 <h1 style="margin:0;">${t('admin_dir')}</h1>
-                <button class="btn-primary" style="width:auto;">+ Add Employee</button>
+                <div style="display:flex; gap:12px;">
+                    <button class="btn-outline" onclick="App.exportToCSV()">📥 Export CSV</button>
+                    <button class="btn-primary" style="width:auto;">+ Add Employee</button>
+                </div>
             </div>
             <div class="card table-wrapper" style="padding:0;">
                 <table style="margin:0;">
-                    <thead><tr><th>ID</th><th>Name</th><th>Department</th><th>Role</th></tr></thead>
-                    <tbody>${AppState.users.map(u => `<tr>
-                        <td>EMP-${u.username.toUpperCase()}</td>
-                        <td><b>${u.name}</b></td>
-                        <td>${u.dept || '-'}</td>
-                        <td><span class="badge" style="background:#f1f5f9;">${u.role.toUpperCase()}</span></td>
-                    </tr>`).join('')}</tbody>
+                    <thead><tr><th>ID</th><th>Name</th><th>Role</th><th>Status</th><th style="text-align:right;">Action</th></tr></thead>
+                    <tbody>${AppState.users.map(u => {
+                        const isActive = u.isActive !== false; 
+                        const statusBadge = isActive ? 
+                            `<span class="badge" style="background:#ecfdf5; color:#047857; border: 1px solid #a7f3d0;">${t('btn_active')}</span>` : 
+                            `<span class="badge" style="background:#fef2f2; color:#b91c1c; border: 1px solid #fecaca;">${t('btn_inactive')}</span>`;
+                        
+                        const toggleBtnStr = isActive ? t('act_disable') : t('act_enable');
+                        const toggleBtnColor = isActive ? `var(--danger)` : `var(--success)`;
+
+                        return `<tr>
+                            <td>EMP-${u.username.toUpperCase()}</td>
+                            <td><b>${u.name}</b><br><span style="font-size:12px; color:var(--text-muted);">${u.dept || '-'}</span></td>
+                            <td><span class="badge" style="background:#f1f5f9;">${u.role.toUpperCase()}</span></td>
+                            <td>${statusBadge}</td>
+                            <td style="text-align:right;">
+                                <button class="btn-outline" style="padding:6px 12px; font-size:12px; width:auto; margin-right: 4px;" onclick="App.openEditUser('${u.username}')">✏️ Edit</button>
+                                <button class="btn-primary" style="background:${toggleBtnColor}; padding:6px 12px; font-size:12px; width:auto;" onclick="App.toggleUserStatus('${u.username}')">${toggleBtnStr}</button>
+                            </td>
+                        </tr>`;
+                    }).join('')}</tbody>
                 </table>
             </div>
         </div>
     `,
-    'admin-rep': () => `
-        <div style="animation: fadeUp 0.4s ease-out;">
-            <h1 style="margin-bottom:24px;">${t('admin_rep')}</h1>
-            <div class="grid-2">
-                <div class="card"><h2 style="margin-bottom:16px;">Leave Distribution</h2><div style="text-align:center; padding:40px; color:var(--text-muted); background:var(--bg-main); border-radius:var(--radius-sm);">Annual Leave: 65%<br>Sick Leave: 25%<br>Personal: 10%</div></div>
-                <div class="card"><h2 style="margin-bottom:16px;">Overtime Costs</h2><div style="text-align:center; padding:40px; color:var(--text-muted); background:var(--bg-main); border-radius:var(--radius-sm);"><b style="font-size:24px; color:var(--primary);">฿ 124,500</b><br>Total OT payout this month</div></div>
-            </div>
-        </div>
-    `,
-    'admin-set': () => `
-        <div style="animation: fadeUp 0.4s ease-out;">
-            <h1 style="margin-bottom:24px;">${t('admin_set')}</h1>
-            <div class="card" style="max-width:600px;">
-                <h2>Global Configurations</h2>
-                <label>Company Name</label><input type="text" id="set-company" value="${AppState.settings.companyName}">
-                <label>Default Annual Leave Quota (Days)</label><input type="number" id="set-quota" value="${AppState.settings.leaveQuota}">
-                <div style="text-align:right; margin-top:16px;">
-                    <button class="btn-primary" style="width:auto; padding: 12px 24px;" onclick="App.saveSettings()">Save Configuration</button>
-                </div>
-            </div>
-        </div>
-    `
+    'admin-rep': () => `<div style="animation: fadeUp 0.4s ease-out;"><h1 style="margin-bottom:24px;">${t('admin_rep')}</h1><div class="grid-2"><div class="card"><h2 style="margin-bottom:16px;">Leave Distribution</h2><div style="text-align:center; padding:40px; color:var(--text-muted); background:var(--bg-main); border-radius:var(--radius-sm);">Annual Leave: 65%<br>Sick Leave: 25%<br>Personal: 10%</div></div><div class="card"><h2 style="margin-bottom:16px;">Overtime Costs</h2><div style="text-align:center; padding:40px; color:var(--text-muted); background:var(--bg-main); border-radius:var(--radius-sm);"><b style="font-size:24px; color:var(--primary);">฿ 124,500</b><br>Total OT payout this month</div></div></div></div>`,
+    'admin-set': () => `<div style="animation: fadeUp 0.4s ease-out;"><h1 style="margin-bottom:24px;">${t('admin_set')}</h1><div class="card" style="max-width:600px;"><h2>Global Configurations</h2><label>Company Name</label><input type="text" id="set-company" value="${AppState.settings.companyName}"><label>Default Annual Leave Quota (Days)</label><input type="number" id="set-quota" value="${AppState.settings.leaveQuota}"><hr style="margin:24px 0; border:0; border-top:1px dashed var(--border);"><h2 style="color:#d97706;">📢 Broadcast Announcement</h2><p style="font-size:12px; color:var(--text-muted); margin-bottom:12px;">พิมพ์ข้อความที่ต้องการแจ้งเตือนพนักงานทุกคน (ลบออกเพื่อปิดการแจ้งเตือน)</p><textarea id="set-broadcast" rows="3" placeholder="เช่น พรุ่งนี้หยุดชดเชยสงกรานต์...">${AppState.settings.broadcast || ''}</textarea><div style="text-align:right; margin-top:16px;"><button class="btn-primary" style="width:auto; padding: 12px 24px;" onclick="App.saveSettings()">Save Configuration</button></div></div></div>`
 };
 
-function toggleSidebar() {
-    document.querySelector('.sidebar').classList.toggle('show');
-}
-
+function toggleSidebar() { document.querySelector('.sidebar').classList.toggle('show'); }
 document.addEventListener('click', function(event) {
     const sidebar = document.querySelector('.sidebar');
     if (!sidebar) return; 
-
     const isClickInsideSidebar = sidebar.contains(event.target);
     const isClickHamburger = event.target.classList.contains('hamburger-btn');
-
     if (window.innerWidth <= 768 && sidebar.classList.contains('show') && (!isClickInsideSidebar || event.target.closest('.nav-item'))) {
-        if(!isClickHamburger){
-            sidebar.classList.remove('show');
-        }
+        if(!isClickHamburger){ sidebar.classList.remove('show'); }
     }
 });
 
-// --- 6. Initialization (Firebase Flow) ---
+// --- 6. Initialization ---
 async function startApp() {
     await DB.load(); 
     applyLang(); 
     
-    // 🟢 ตรวจสอบสถานะล็อกอินจากเครื่อง (Local Storage) แทน
     const savedUser = localStorage.getItem('hr_logged_user');
     if(savedUser) {
-        AppState.currentUser = JSON.parse(savedUser);
+        const u = JSON.parse(savedUser);
+        // เช็คว่าตอนโหลดเว็บใหม่ บัญชียังใช้งานได้อยู่ไหม
+        const serverUser = AppState.users.find(x => x.username === u.username);
+        if (serverUser && serverUser.isActive === false) {
+            localStorage.removeItem('hr_logged_user');
+            alert(t('acc_locked'));
+            document.getElementById('auth-view').style.display = 'flex';
+            document.getElementById('app-view').style.display = 'none';
+            return;
+        }
+        
+        AppState.currentUser = u;
         App.boot();
     } else {
         document.getElementById('auth-view').style.display = 'flex';
@@ -661,5 +626,4 @@ async function startApp() {
     }
 }
 
-// เริ่มการทำงานของระบบ
 startApp();
