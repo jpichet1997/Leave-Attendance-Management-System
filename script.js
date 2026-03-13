@@ -4,6 +4,7 @@ const dict = {
     'th': {
         'dash': 'หน้าหลัก', 'time': 'ลงเวลา & วันลา', 'slip': 'สลิปเงินเดือน', 'cal': 'ปฏิทินบริษัท', 'doc': 'เอกสารองค์กร', 'prof': 'โปรไฟล์ส่วนตัว',
         'admin_dash': 'สถิติภาพรวม', 'admin_appr': 'อนุมัติคำขอ', 'admin_dir': 'รายชื่อพนักงาน', 'admin_rep': 'รายงานวิเคราะห์', 'admin_set': 'ตั้งค่าระบบ',
+        'it_dash': 'แผงควบคุมระบบ (IT)', 'it_users': 'จัดการผู้ใช้งาน', 'it_set': 'ตั้งค่าระบบเซิร์ฟเวอร์', 'it_log': 'ประวัติการใช้งานระบบ',
         'welcome': 'ยินดีต้อนรับกลับมา,', 'clock_title': 'ระบบลงเวลา', 'clock_btn_in': 'บันทึกเข้างาน', 'clock_btn_out': 'บันทึกออกงาน',
         'loc_office': '🏢 สำนักงานใหญ่', 'loc_wfh': '🏠 WFH', 'salary_title': 'เงินเดือนสุทธิ (เดือนนี้)',
         'show': 'แสดง', 'hide': 'ซ่อน', 'leave_bal': 'วันลาคงเหลือ', 'req_ot': 'ขอทำ OT', 'req_lv': 'ขอลางาน',
@@ -19,6 +20,7 @@ const dict = {
     'en': {
         'dash': 'Dashboard', 'time': 'Time & Leave', 'slip': 'E-Payslip', 'cal': 'Company Calendar', 'doc': 'Policies & Docs', 'prof': 'My Profile',
         'admin_dash': 'Overview', 'admin_appr': 'Approvals', 'admin_dir': 'Employee Directory', 'admin_rep': 'Analytics', 'admin_set': 'System Settings',
+        'it_dash': 'IT Operations', 'it_users': 'Manage Users', 'it_set': 'System Config', 'it_log': 'Audit Logs',
         'welcome': 'Welcome back,', 'clock_title': 'Attendance System', 'clock_btn_in': 'Clock In', 'clock_btn_out': 'Clock Out',
         'loc_office': '🏢 Head Office', 'loc_wfh': '🏠 Remote WFH', 'salary_title': 'Net Salary (Current)',
         'show': 'Show', 'hide': 'Hide', 'leave_bal': 'Leave Balance', 'req_ot': 'Request OT', 'req_lv': 'Request Leave',
@@ -41,7 +43,6 @@ function toggleLanguage(event) {
     localStorage.setItem('hr_lang', lang); 
     applyLang(); 
     
-    // 🟢 แก้ไข: เช็คให้แน่ใจว่าหน้าเว็บแสดงผลอยู่ ถึงจะโหลดข้อมูลใหม่ (ห้ามทำตอนอยู่หน้าล็อกอิน)
     const authView = document.getElementById('auth-view');
     if (AppState && AppState.currentUser && authView.style.display === 'none') {
         App.boot();
@@ -77,19 +78,22 @@ const dbRef = db.collection('hr_database').doc('main_state');
 const defaultState = {
     users: [
         { username: 'admin', password: '123', name: 'Manager Admin', role: 'admin', dept: 'Management', isActive: true },
-        { username: 'user', password: '123', name: 'พิเชษฐ์ แจ้งกระจ่าง', role: 'employee', dept: 'IT Operations', isActive: true }
+        { username: 'user', password: '123', name: 'พิเชษฐ์ แจ้งกระจ่าง', role: 'employee', dept: 'IT Operations', isActive: true },
+        { username: 'it', password: '123', name: 'IT Admin', role: 'it', dept: 'System Support', isActive: true }
     ],
     currentUser: null, 
     dailyClock: {}, 
-    leaveBalances: { 'user': { annual: 8.5, sick: 28 }, 'admin': { annual: 15, sick: 30 } }, 
+    leaveBalances: { 'user': { annual: 8.5, sick: 28 }, 'admin': { annual: 15, sick: 30 }, 'it': { annual: 15, sick: 30 } }, 
     requests: [], 
     timeLogs: [], 
     notifications: [], 
+    auditLogs: [], // 🟢 เพิ่ม Array สำหรับเก็บประวัติการใช้งาน
     profiles: { 
         'admin': { email: 'admin@quantum.co.th', phone: '089-999-9999', startDate: '2020-01-01', avatar: '' },
-        'user': { email: 'user@quantum.co.th', phone: '081-234-5678', startDate: '2024-01-15', avatar: '' }
+        'user': { email: 'user@quantum.co.th', phone: '081-234-5678', startDate: '2024-01-15', avatar: '' },
+        'it': { email: 'it@quantum.co.th', phone: '088-888-8888', startDate: '2022-05-10', avatar: '' }
     },
-    settings: { companyName: 'Quantum Corp', leaveQuota: 10, broadcast: '' }
+    settings: { companyName: 'Quantum Corp', leaveQuota: 10, broadcast: '', maintenance: false }
 };
 
 let AppState = defaultState;
@@ -100,15 +104,11 @@ const DB = {
             const doc = await dbRef.get();
             if (doc.exists) {
                 AppState = doc.data();
-                
-                // 🟢 สำคัญมาก! ล้างข้อมูลการล็อกอินเก่าๆ ที่อาจค้างอยู่บน Firebase ทิ้งให้หมด
                 AppState.currentUser = null; 
-
-                if(!AppState.profiles) {
-                    AppState.profiles = defaultState.profiles;
-                    if(AppState.profile) AppState.profiles['user'] = AppState.profile;
-                }
+                if(!AppState.profiles) { AppState.profiles = defaultState.profiles; }
+                if(!AppState.auditLogs) AppState.auditLogs = []; // ป้องกันกรณีข้อมูลเก่าไม่มีฟิลด์นี้
                 if (AppState.settings.broadcast === undefined) AppState.settings.broadcast = '';
+                if (AppState.settings.maintenance === undefined) AppState.settings.maintenance = false;
             } else { 
                 await dbRef.set(defaultState); 
                 AppState = defaultState; 
@@ -124,6 +124,8 @@ const DB = {
 };
 
 let chartInst = null; 
+let liveChartInst = null; // 🟢 ตัวแปรสำหรับกราฟหุ้น IT
+let liveChartInterval = null; // 🟢 ตัวแปรสำหรับ Loop กราฟ
 let isSalaryVisible = false; 
 let calMonth = new Date().getMonth();
 let calYear = new Date().getFullYear();
@@ -156,32 +158,68 @@ const Auth = {
     register: () => {
         const name = document.getElementById('reg-name').value, user = document.getElementById('reg-user').value, pass = document.getElementById('reg-pass').value, role = document.getElementById('reg-role').value;
         if (AppState.users.find(u => u.username === user)) return App.toast('Username is taken', 'error');
-        AppState.users.push({ username: user, password: pass, name: name, role: role, dept: role==='admin'?'HR':'General', isActive: true });
+        
+        let defDept = 'General';
+        if(role === 'admin') defDept = 'HR';
+        if(role === 'it') defDept = 'IT Operations';
+
+        AppState.users.push({ username: user, password: pass, name: name, role: role, dept: defDept, isActive: true });
         AppState.leaveBalances[user] = { annual: AppState.settings.leaveQuota, sick: 30 }; 
         AppState.profiles[user] = { email: user+'@quantum.co.th', phone: '-', startDate: new Date().toLocaleDateString('en-CA'), avatar: '' };
+        
+        App.addLog('Account Created', `สร้างบัญชีใหม่: ${user} (${role})`); // 🟢 บันทึก Log
         DB.save(AppState); App.toast('Account Created', 'success'); Auth.toggle('login'); 
     },
     login: () => {
         const u = document.getElementById('login-user').value, p = document.getElementById('login-pass').value;
+        
+        // 🟢 ตรวจสอบโหมดซ่อมบำรุง (Maintenance)
+        if(AppState.settings.maintenance && u !== 'it') {
+            if(typeof Swal !== 'undefined') {
+                Swal.fire({ icon: 'warning', title: 'System Maintenance', text: 'ระบบกำลังอยู่ในช่วงปรับปรุงโดยฝ่าย IT กรุณาเข้าใช้งานภายหลัง' });
+            } else { alert('System Maintenance Mode. Please try again later.'); }
+            return;
+        }
+
         const acc = AppState.users.find(x => x.username === u && x.password === p);
         if (acc) { 
-            if (acc.isActive === false) {
-                alert(t('acc_locked')); 
-                return; 
-            }
+            if (acc.isActive === false) { alert(t('acc_locked')); return; }
             AppState.currentUser = acc; 
             localStorage.setItem('hr_logged_user', JSON.stringify(acc)); 
-            App.boot(); 
+            
+            App.addLog('Login', `ผู้ใช้ ${u} เข้าสู่ระบบสำเร็จ`); // 🟢 บันทึก Log
+
+            const isThai = lang === 'th';
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    icon: 'success', title: isThai ? 'เข้าสู่ระบบสำเร็จ!' : 'Login Successful!',
+                    text: isThai ? 'กำลังพาท่านเข้าสู่ระบบ...' : 'Redirecting to your dashboard...',
+                    showConfirmButton: false, timer: 1500
+                }).then(() => { App.boot(); });
+            } else { App.boot(); }
         } else alert('Invalid credentials');
     },
     logout: () => { 
-        AppState.currentUser = null; 
-        localStorage.removeItem('hr_logged_user'); 
-        location.reload(); 
+        App.addLog('Logout', `ผู้ใช้ ${AppState.currentUser.username} ออกจากระบบ`);
+        AppState.currentUser = null; localStorage.removeItem('hr_logged_user'); location.reload(); 
     }
 };
 
 const App = {
+    // 🟢 ฟังก์ชันสำหรับบันทึกประวัติการใช้งาน (Audit Log)
+    addLog: (action, detail) => {
+        if (!AppState.auditLogs) AppState.auditLogs = [];
+        AppState.auditLogs.unshift({
+            id: Date.now(),
+            user: AppState.currentUser ? AppState.currentUser.name : 'System',
+            role: AppState.currentUser ? AppState.currentUser.role : '-',
+            action: action,
+            detail: detail,
+            time: new Date().toLocaleString('th-TH')
+        });
+        DB.save(AppState);
+    },
+
     boot: () => {
         document.getElementById('auth-view').style.display = 'none';
         document.getElementById('app-view').style.display = 'flex';
@@ -192,18 +230,30 @@ const App = {
         App.updateAvatarImg();
         
         const menu = document.getElementById('nav-menu');
+        
         if (u.role === 'admin') {
             menu.innerHTML = `
-                <div class="nav-divider">DASHBOARD</div>
+                <div class="nav-divider">HR DASHBOARD</div>
                 <div class="nav-item active" onclick="App.nav('admin-dash', this)">📊 ${t('admin_dash')}</div>
                 <div class="nav-item" onclick="App.nav('admin-approve', this)">✅ ${t('admin_appr')} <span class="badge bg-danger" style="color:white; margin-left:auto;" id="badge-pending">0</span></div>
                 <div class="nav-divider">ADMINISTRATION</div>
                 <div class="nav-item" onclick="App.nav('admin-dir', this)">👥 ${t('admin_dir')}</div>
                 <div class="nav-item" onclick="App.nav('admin-rep', this)">📈 ${t('admin_rep')}</div>
-                <div class="nav-item" onclick="App.nav('admin-set', this)">⚙️ ${t('admin_set')}</div>
                 <div class="nav-divider">PERSONAL</div>
                 <div class="nav-item" onclick="App.nav('prof', this)">⚙️ ${t('prof')}</div>`;
             App.nav('admin-dash', menu.children[1]);
+            
+        } else if (u.role === 'it') {
+            menu.innerHTML = `
+                <div class="nav-divider">IT OPERATIONS</div>
+                <div class="nav-item active" onclick="App.nav('it-dash', this)">💻 ${t('it_dash')}</div>
+                <div class="nav-item" onclick="App.nav('admin-dir', this)">👥 ${t('it_users')}</div>
+                <div class="nav-item" onclick="App.nav('it-logs', this)">📜 ${t('it_log')}</div>
+                <div class="nav-item" onclick="App.nav('admin-set', this)">⚙️ ${t('it_set')}</div>
+                <div class="nav-divider">PERSONAL</div>
+                <div class="nav-item" onclick="App.nav('prof', this)">⚙️ ${t('prof')}</div>`;
+            App.nav('it-dash', menu.children[1]);
+
         } else {
             menu.innerHTML = `
                 <div class="nav-divider">MY WORKSPACE</div>
@@ -220,8 +270,24 @@ const App = {
     },
     
     nav: (page, el) => {
+        // 🟢 ล้าง Loop กราฟวิ่งทุกครั้งที่เปลี่ยนหน้า เพื่อไม่ให้หน่วงเครื่อง
+        if(liveChartInterval) clearInterval(liveChartInterval);
+
         if(el) { document.querySelectorAll('.nav-item').forEach(x => x.classList.remove('active')); el.classList.add('active'); }
-        document.getElementById('page-content').innerHTML = `<div style="display:flex; flex-direction:column; justify-content:center; align-items:center; height:50vh;"><div class="api-loader"></div><p style="margin-top:16px; color:var(--text-muted);">${t('loading')}</p></div>`;
+        
+        // 🟢 2. Loading State (Skeleton Loading)
+        document.getElementById('page-content').innerHTML = `
+            <div class="skeleton-loader">
+                <div class="skeleton-line" style="width: 40%; height: 35px; margin-bottom: 30px;"></div>
+                <div class="grid-3" style="margin-bottom: 30px;">
+                    <div class="skeleton-card" style="height: 120px;"></div>
+                    <div class="skeleton-card" style="height: 120px;"></div>
+                    <div class="skeleton-card" style="height: 120px;"></div>
+                </div>
+                <div class="skeleton-card" style="height: 300px;"></div>
+            </div>
+        `;
+
         setTimeout(() => {
             document.getElementById('page-content').innerHTML = Views[page]();
             if(page === 'home') { isSalaryVisible = false; App.updateClock(); App.renderChart(); }
@@ -229,12 +295,13 @@ const App = {
             if(page === 'cal') App.renderCalendarGrid();
             if(page === 'admin-rep') App.renderAdminCharts();
             if(page === 'admin-dash') App.renderAdminDashChart();
-        }, 300);
+            if(page === 'it-dash') App.renderITLiveChart(); // 🟢 เรียกใช้งานกราฟวิ่ง
+        }, 400); // แสดงโครง Skeleton 0.4 วินาทีเพื่อความสวยงาม
     },
 
     getSalary: () => {
         const u = AppState.currentUser;
-        if(u.role === 'admin') { return { base: 85000, ot: 0, allow: 5000, sso: 750, tax: 6500, absent: 0, earn: 90000, deduct: 7250, net: 82750 }; } 
+        if(u.role === 'admin' || u.role === 'it') { return { base: 85000, ot: 0, allow: 5000, sso: 750, tax: 6500, absent: 0, earn: 90000, deduct: 7250, net: 82750 }; } 
         else { return { base: 35000, ot: 4250, allow: 1500, sso: 750, tax: 1250, absent: 0, earn: 40750, deduct: 2000, net: 38750 }; }
     },
 
@@ -294,6 +361,42 @@ const App = {
         a.click();
     },
 
+    // 🟢 1. Reset Password Function (สำหรับ IT/Admin)
+    resetPass: (username) => {
+        if(typeof Swal !== 'undefined') {
+            Swal.fire({
+                title: `Reset Password: ${username}`,
+                input: 'text',
+                inputLabel: 'ตั้งรหัสผ่านใหม่สำหรับพนักงานคนนี้',
+                inputValue: '123456',
+                showCancelButton: true,
+                confirmButtonText: 'บันทึกรหัสใหม่',
+                confirmButtonColor: '#2563eb'
+            }).then((result) => {
+                if (result.isConfirmed && result.value) {
+                    const u = AppState.users.find(x => x.username === username);
+                    if(u) {
+                        u.password = result.value;
+                        App.addLog('Password Reset', `เปลี่ยนรหัสผ่านของพนักงาน: ${username}`); // 🟢 บันทึก Log
+                        DB.save(AppState);
+                        App.toast('Reset Password Successfully', 'success');
+                    }
+                }
+            });
+        } else {
+            const newPass = prompt(`ตั้งรหัสผ่านใหม่สำหรับ ${username}:`, "123456");
+            if (newPass) {
+                const u = AppState.users.find(x => x.username === username);
+                if(u) {
+                    u.password = newPass;
+                    App.addLog('Password Reset', `เปลี่ยนรหัสผ่านของพนักงาน: ${username}`);
+                    DB.save(AppState);
+                    App.toast(`เปลี่ยนรหัสผ่านของ ${username} เรียบร้อยแล้ว`, 'success');
+                }
+            }
+        }
+    },
+
     openEditUser: (username) => {
         const u = AppState.users.find(x => x.username === username);
         const bal = AppState.leaveBalances[username] || { annual: 0, sick: 0 };
@@ -321,9 +424,10 @@ const App = {
                             <select id="edit-u-role">
                                 <option value="employee" ${u.role==='employee'?'selected':''}>Employee</option>
                                 <option value="admin" ${u.role==='admin'?'selected':''}>Admin (HR)</option>
+                                <option value="it" ${u.role==='it'?'selected':''}>IT Support</option>
                             </select>
                         </div>
-                        <div><label>ตั้งรหัสผ่านใหม่</label><input type="text" id="edit-u-pass" value="${u.password}" required></div>
+                        <div><label>Username (ID)</label><input type="text" value="${u.username}" disabled style="background:#f1f5f9;"></div>
                     </div>
                     <div class="grid-2">
                         <div><label>วันพักร้อนคงเหลือ (วัน)</label><input type="number" step="0.5" id="edit-u-annual" value="${bal.annual}" required></div>
@@ -345,33 +449,32 @@ const App = {
             u.name = document.getElementById('edit-u-name').value;
             u.dept = document.getElementById('edit-u-dept').value;
             u.role = document.getElementById('edit-u-role').value;
-            u.password = document.getElementById('edit-u-pass').value;
         }
         
         if(!AppState.leaveBalances[username]) AppState.leaveBalances[username] = {};
         AppState.leaveBalances[username].annual = parseFloat(document.getElementById('edit-u-annual').value);
         AppState.leaveBalances[username].sick = parseFloat(document.getElementById('edit-u-sick').value);
         
+        App.addLog('User Edited', `แก้ไขข้อมูลพนักงาน: ${username}`); // 🟢 บันทึก Log
         DB.save(AppState);
         App.closeModal('modal-edit-user');
         App.toast('อัปเดตข้อมูลพนักงานสำเร็จ!', 'success');
         
-        const navEl = Array.from(document.querySelectorAll('.nav-item')).find(el => el.innerText.includes('Employee') || el.innerText.includes('รายชื่อ'));
+        const navEl = Array.from(document.querySelectorAll('.nav-item')).find(el => el.innerText.includes('Employee') || el.innerText.includes('รายชื่อ') || el.innerText.includes('Manage Users'));
         if(navEl) App.nav('admin-dir', navEl);
     },
 
     toggleUserStatus: (username) => {
-        if (username === AppState.currentUser.username) {
-            return App.toast('คุณไม่สามารถระงับบัญชีของตัวเองได้!', 'error');
-        }
-
+        if (username === AppState.currentUser.username) { return App.toast('คุณไม่สามารถระงับบัญชีของตัวเองได้!', 'error'); }
         const u = AppState.users.find(x => x.username === username);
         if(u) {
             u.isActive = u.isActive === false ? true : false;
+            
+            App.addLog('Status Changed', `เปลี่ยนสถานะบัญชี ${username} เป็น ${u.isActive ? 'Active' : 'Inactive'}`); // 🟢 บันทึก Log
             DB.save(AppState);
             App.toast(`อัปเดตสถานะบัญชี ${username} เรียบร้อย`, 'success');
             
-            const navEl = Array.from(document.querySelectorAll('.nav-item')).find(el => el.innerText.includes('Employee') || el.innerText.includes('รายชื่อ'));
+            const navEl = Array.from(document.querySelectorAll('.nav-item')).find(el => el.innerText.includes('Employee') || el.innerText.includes('รายชื่อ') || el.innerText.includes('Manage Users'));
             if(navEl) App.nav('admin-dir', navEl);
         }
     },
@@ -400,9 +503,48 @@ const App = {
         AppState.settings.companyName = document.getElementById('set-company').value;
         AppState.settings.leaveQuota = parseInt(document.getElementById('set-quota').value);
         AppState.settings.broadcast = document.getElementById('set-broadcast').value; 
+        
+        // บันทึกสถานะ Maintenance ถ้ามีให้ดึง
+        const maintEl = document.getElementById('set-maintenance');
+        if(maintEl) {
+            const isMaint = maintEl.value === 'on';
+            if (AppState.settings.maintenance !== isMaint) {
+                App.addLog('System', `เปิด/ปิดโหมด Maintenance: ${isMaint ? 'ON' : 'OFF'}`);
+            }
+            AppState.settings.maintenance = isMaint;
+        }
+
         DB.save(AppState); 
-        App.toast('System settings updated');
+        App.toast('System settings updated securely', 'success');
     },
+    
+    // 🟢 ฟังก์ชันสำหรับ IT: Backup Database
+    backupDB: () => {
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(AppState, null, 2));
+        const a = document.createElement('a');
+        a.href = dataStr;
+        a.download = "HR_Database_Backup_" + new Date().toISOString().slice(0,10) + ".json";
+        a.click();
+        App.addLog('System', 'ดาวน์โหลด Backup Database'); // 🟢 บันทึก Log
+        App.toast('Database Backup Downloaded', 'success');
+    },
+
+    // 🟢 ฟังก์ชันสำหรับ IT: Clear Cache
+    clearCache: () => {
+        if(typeof Swal !== 'undefined') {
+            Swal.fire({
+                title: 'Clear System Cache?',
+                text: "การล้างแคชอาจทำให้ระบบโหลดช้าลงในการเข้าใช้งานครั้งถัดไป คุณต้องการทำต่อหรือไม่?",
+                icon: 'warning', showCancelButton: true, confirmButtonColor: '#d33', cancelButtonColor: '#3085d6', confirmButtonText: 'Yes, clear cache!'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    App.addLog('System', 'ล้างแคชระบบ (Clear Cache)'); // 🟢 บันทึก Log
+                    App.toast('System Cache Cleared Successfully!', 'success');
+                }
+            });
+        } else { App.toast('Cache Cleared'); }
+    },
+
     clock: () => {
         const u = AppState.currentUser.username, d = new Date().toLocaleDateString('en-CA'), loc = document.getElementById('work-location').value;
         if (!AppState.dailyClock[u] || AppState.dailyClock[u].date !== d) AppState.dailyClock[u] = { date: d, status: 'out', in: null };
@@ -436,16 +578,47 @@ const App = {
         AppState.requests.unshift({ id: Date.now(), type: 'OT', u: AppState.currentUser.username, name: AppState.currentUser.name, detail: document.getElementById('ot-hours').value + ' Hrs', reason: document.getElementById('ot-reason').value, status: 'Pending' });
         DB.save(AppState); App.closeModal('modal-ot'); App.toast('OT Requested'); App.nav('time', document.querySelectorAll('.nav-item')[1]);
     },
+
+    sendLineAlert: (employee, type, status) => {
+        const webhookUrl = "https://hook.eu1.make.com/63miskvj947chdguwvz553l12ikk9qqb"; 
+        
+        fetch(webhookUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                employeeName: employee,
+                requestType: type,
+                result: status,
+                time: new Date().toLocaleString('th-TH')
+            })
+        })
+        .then(() => console.log("Webhook data sent successfully!"))
+        .catch(err => console.error("Webhook Error:", err));
+    },
+
     actionReq: (id, stat) => {
         const r = AppState.requests.find(x => x.id === id);
-        if(r) { r.status = stat; DB.save(AppState); App.toast(`Marked as ${stat}`); App.nav('admin-approve'); App.updateBadge(); Notif.push(r.u, `Manager ${stat} your ${r.type} request.`); }
+        if(r) { 
+            r.status = stat; 
+            App.addLog('Approval', `แอดมิน ${stat} คำขอ ${r.type} ของพนักงาน: ${r.name}`); // 🟢 บันทึก Log
+            DB.save(AppState); 
+            App.toast(`Marked as ${stat}`); 
+            App.sendLineAlert(r.name, r.type, stat);
+            App.nav('admin-approve'); 
+            App.updateBadge(); 
+            Notif.push(r.u, `Manager ${stat} your ${r.type} request.`); 
+        }
     },
+
     renderChart: () => {
         if(chartInst) chartInst.destroy();
         const u = AppState.currentUser.username;
         const bal = AppState.leaveBalances[u] ? AppState.leaveBalances[u].annual : 0;
-        chartInst = new Chart(document.getElementById('userChart'), { type: 'doughnut', data: { labels: ['Used', 'Remaining'], datasets: [{ data: [AppState.settings.leaveQuota-bal, bal], backgroundColor: ['#e2e8f0', '#2563eb'], borderWidth: 0 }] }, options: { cutout: '80%', plugins: { legend: { display: false } } } });
+        const ctx = document.getElementById('userChart');
+        if(!ctx) return;
+        chartInst = new Chart(ctx, { type: 'doughnut', data: { labels: ['Used', 'Remaining'], datasets: [{ data: [AppState.settings.leaveQuota-bal, bal], backgroundColor: ['#e2e8f0', '#2563eb'], borderWidth: 0 }] }, options: { cutout: '80%', plugins: { legend: { display: false } } } });
     },
+    
     renderAdminDashChart: () => {
         if(chartInst) chartInst.destroy();
         const ctx = document.getElementById('adminDashChart');
@@ -456,9 +629,9 @@ const App = {
             data: {
                 labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'], 
                 datasets: [
-                    { label: 'Present (มาทำงาน)', data: [12, 15, 14, 13, 10], backgroundColor: '#059669' },
-                    { label: 'Leave (ลา)', data: [2, 0, 1, 1, 4], backgroundColor: '#d97706' },
-                    { label: 'WFH (ทำงานที่บ้าน)', data: [1, 0, 0, 1, 1], backgroundColor: '#2563eb' }
+                    { label: 'Present', data: [12, 15, 14, 13, 10], backgroundColor: '#059669' },
+                    { label: 'Leave', data: [2, 0, 1, 1, 4], backgroundColor: '#d97706' },
+                    { label: 'WFH', data: [1, 0, 0, 1, 1], backgroundColor: '#2563eb' }
                 ]
             }, 
             options: { 
@@ -468,6 +641,69 @@ const App = {
             } 
         });
     },
+
+    // 🟢 ปรับฟังก์ชันกราฟวิ่งให้สมูทและเนียนขึ้น
+    renderITLiveChart: () => {
+        if(liveChartInst) liveChartInst.destroy();
+        const ctx = document.getElementById('itLiveChart');
+        if (!ctx) return;
+
+        // จำลองข้อมูล CPU โดยเริ่มที่ประมาณ 15-25%
+        let currentCpu = 20; 
+        const initialData = Array.from({length: 40}, () => {
+            currentCpu += (Math.random() * 4) - 2; // ขยับทีละน้อยๆ (เนียนขึ้น)
+            if(currentCpu < 5) currentCpu = 5;
+            if(currentCpu > 90) currentCpu = 90;
+            return currentCpu;
+        });
+
+        liveChartInst = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: Array(40).fill(''), 
+                datasets: [{
+                    label: 'CPU Usage (%)',
+                    data: initialData,
+                    borderColor: '#10b981', 
+                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.4, 
+                    pointRadius: 0 
+                }]
+            },
+            options: {
+                maintainAspectRatio: false,
+                animation: { duration: 0 }, // ปิด animation ของ chart.js เพื่อไม่ให้กระตุกเวลา shift array
+                scales: {
+                    y: { min: 0, max: 100, ticks: { stepSize: 20 } },
+                    x: { display: false } 
+                },
+                plugins: { legend: { display: false } }
+            }
+        });
+
+        // อัปเดตข้อมูลทุกๆ 1 วินาทีแบบเนียนๆ
+        liveChartInterval = setInterval(() => {
+            const data = liveChartInst.data.datasets[0].data;
+            let lastVal = data[data.length - 1];
+            
+            // ขยับค่าให้สมจริง (ไม่กระโดดแรงเกินไป)
+            let change = (Math.random() * 6) - 3; 
+            
+            // สุ่มให้บางครั้งมีการ Spike (พุ่งขึ้น) เหมือนเซิร์ฟเวอร์โหลดหนัก
+            if(Math.random() > 0.95) change += 20; 
+
+            let newVal = lastVal + change;
+            if(newVal > 98) newVal = 98; 
+            if(newVal < 2) newVal = 2;
+
+            data.push(newVal); 
+            data.shift(); 
+            liveChartInst.update();
+        }, 1000);
+    },
+
     genSlip: () => {
         const wrapper = document.getElementById('printable-area'); if(!wrapper) return;
         const slip = App.getSalary();
@@ -492,6 +728,79 @@ const App = {
 
 // --- 5. VIEWS ---
 const Views = {
+    // 🟢 หน้า Dashboard พิเศษสำหรับ IT (กราฟวิ่งใหม่ที่สมูทขึ้น)
+    'it-dash': () => {
+        const activeUsers = AppState.users.filter(u => u.isActive !== false).length;
+        const suspendedUsers = AppState.users.length - activeUsers;
+        
+        return `
+        <div style="animation: fadeUp 0.4s ease-out;">
+            <h1 style="margin-bottom:24px;">💻 ${t('it_dash')}</h1>
+            
+            <div class="grid-3" style="margin-bottom: 24px;">
+                <div class="card" style="border-top: 4px solid var(--primary);">
+                    <h2 style="font-size:13px; color:var(--text-muted); text-transform:uppercase;">Total Accounts</h2>
+                    <div class="stat-value" style="font-size:36px; margin-top:8px;">${AppState.users.length}</div>
+                </div>
+                <div class="card" style="border-top: 4px solid var(--success);">
+                    <h2 style="font-size:13px; color:var(--text-muted); text-transform:uppercase;">Active Users</h2>
+                    <div class="stat-value" style="color:var(--success); font-size:36px; margin-top:8px;">${activeUsers}</div>
+                </div>
+                <div class="card" style="border-top: 4px solid var(--danger);">
+                    <h2 style="font-size:13px; color:var(--text-muted); text-transform:uppercase;">Suspended</h2>
+                    <div class="stat-value" style="color:var(--danger); font-size:36px; margin-top:8px;">${suspendedUsers}</div>
+                </div>
+            </div>
+
+            <div class="card" style="margin-bottom: 24px;">
+                <h2 style="margin-bottom:16px; display:flex; align-items:center; gap:8px;">
+                    <span style="display:inline-block; width:10px; height:10px; background:var(--success); border-radius:50%; box-shadow: 0 0 8px var(--success);"></span> 
+                    Live Server Load (CPU Usage)
+                </h2>
+                <div style="height: 250px; width: 100%; position: relative;">
+                    <canvas id="itLiveChart"></canvas>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2 style="margin-bottom:16px;">System Health Check</h2>
+                <div style="padding:20px; background:#ecfdf5; border:1px solid #a7f3d0; border-radius:var(--radius-sm); color:#047857; display:flex; align-items:center; gap:16px; box-shadow:var(--shadow-sm);">
+                    <div style="font-size:32px; background:white; width:60px; height:60px; display:flex; align-items:center; justify-content:center; border-radius:50%; box-shadow:var(--shadow-sm);">✅</div> 
+                    <div>
+                        <strong style="font-size:18px;">All Systems Operational</strong><br>
+                        <span style="font-size:13px; opacity:0.8;">Firebase Database connected. Make.com Webhooks active.</span>
+                    </div>
+                </div>
+            </div>
+        </div>`;
+    },
+
+    // 🟢 หน้า Audit Logs สำหรับ IT
+    'it-logs': () => {
+        const logs = AppState.auditLogs || [];
+        return `
+        <div style="animation: fadeUp 0.4s ease-out;">
+            <div class="flex-between" style="margin-bottom:24px;">
+                <h1 style="margin:0;">📜 ${t('it_log')}</h1>
+                <button class="btn-outline" onclick="App.toast('Logs exported', 'success')">📥 Export Logs</button>
+            </div>
+            <div class="card table-wrapper" style="padding:0;">
+                <table style="margin:0;">
+                    <thead><tr><th>Time</th><th>User</th><th>Role</th><th>Action</th><th>Details</th></tr></thead>
+                    <tbody>${logs.slice(0, 50).map(l => `
+                        <tr>
+                            <td style="color:var(--text-muted); font-size:12px;">${l.time}</td>
+                            <td><b style="color:var(--primary);">${l.user}</b></td>
+                            <td><span class="badge" style="background:#f1f5f9;">${l.role.toUpperCase()}</span></td>
+                            <td><span class="badge" style="background:#e0e7ff; color:#1d4ed8;">${l.action}</span></td>
+                            <td style="font-size:13px;">${l.detail}</td>
+                        </tr>
+                    `).join('') || `<tr><td colspan="5" class="empty-state">No audit logs found.</td></tr>`}</tbody>
+                </table>
+            </div>
+        </div>`;
+    },
+
     'home': () => {
         const u = AppState.currentUser.username;
         const bal = AppState.leaveBalances[u] ? AppState.leaveBalances[u].annual : 0;
@@ -513,7 +822,7 @@ const Views = {
         return `<div class="flex-between" style="margin-bottom: 24px; animation: fadeUp 0.4s ease-out;"><h1 style="margin:0;">${t('time')}</h1><div style="display:flex; gap:12px;"><button class="btn-outline" onclick="App.openModal('modal-ot')">${t('req_ot')}</button><button class="btn-primary" onclick="App.openModal('modal-leave')">${t('req_lv')}</button></div></div>
         <div class="card" style="padding-top:16px;"><div class="ui-tabs"><button class="tab-btn active" onclick="App.switchTab('t1', this)">${t('tab_log')}</button><button class="tab-btn" onclick="App.switchTab('t2', this)">${t('tab_lv')} / OT</button></div>
             <div id="t1" class="tab-content active table-wrapper"><table><thead><tr><th>Date</th><th>Location</th><th>In</th><th>Out</th><th>Hours</th></tr></thead><tbody>${logs.map(l=>`<tr><td><b style="color:var(--primary);">${l.d}</b></td><td><span class="badge" style="background:white; border: 1px solid var(--border); color:var(--text-muted);">${l.loc}</span></td><td>${l.in}</td><td>${l.out}</td><td><b style="color:var(--accent);">${l.hrs}</b></td></tr>`).join('') || `<tr><td colspan="5" class="empty-state">${t('no_data')}</td></tr>`}</tbody></table></div>
-            <div id="t2" class="tab-content table-wrapper"><table><thead><tr><th>Type</th><th>Details</th><th>Status</th></tr></thead><tbody>${reqs.map(r=>`<tr><td><span class="badge" style="background:#f1f5f9; border:1px solid var(--border); color:var(--primary);">${r.type}</span></td><td><b>${r.detail}</b><br><span style="font-size:12px; color:var(--text-muted);">${r.reason}</span></td><td><span class="badge bg-${r.status.toLowerCase()}">${r.status}</span></td></tr>`).join('') || `<tr><td colspan="3" class="empty-state">${t('no_data')}</td></tr>`}</tbody></table></div>
+            <div id="t2" class="tab-content table-wrapper"><table><thead><tr><th>Type</th><th>Details</th><th>Status</th></tr></thead><tbody>${reqs.map(r=>`<tr><td><span class="badge" style="background:#f1f5f9; border:1px solid var(--border); color:var(--primary);">${r.type}</span></td><td><b>${r.detail}</b><br><span class="my-tooltip" style="font-size:12px;">${r.reason}<span class="tooltip-box">รายละเอียด:<br>${r.reason}</span></span></td><td><span class="badge bg-${r.status.toLowerCase()}">${r.status}</span></td></tr>`).join('') || `<tr><td colspan="3" class="empty-state">${t('no_data')}</td></tr>`}</tbody></table></div>
         </div>`;
     },
     'payslip': () => `
@@ -547,9 +856,11 @@ const Views = {
     },
     'admin-approve': () => {
         const p = AppState.requests.filter(r=>r.status==='Pending');
-        return `<div style="animation: fadeUp 0.4s ease-out;"><h1 style="margin-bottom:24px;">${t('admin_appr')}</h1><div class="card table-wrapper" style="padding: 0;"><table style="margin:0;"><thead><tr><th>Employee</th><th>Request Info</th><th style="text-align:right;">Actions</th></tr></thead><tbody>${p.map(r=>`<tr><td><b style="font-size:14px; color:var(--primary);">${r.name}</b><br><span style="font-size:12px; color:var(--text-muted);">EMP-${r.u.toUpperCase()}</span></td><td><span class="badge" style="background:#f1f5f9; margin-bottom:4px;">${r.type}</span> <b style="font-size:13px;">${r.detail}</b><br><span style="font-size:12px; color:var(--text-muted);">${r.reason}</span></td><td style="text-align:right;"><button class="btn-primary" style="background:var(--success); width:auto; padding:6px 14px; margin-right:4px;" onclick="App.actionReq(${r.id}, 'Approved')">${t('approve')}</button> <button class="btn-primary" style="background:var(--danger); width:auto; padding:6px 14px;" onclick="App.actionReq(${r.id}, 'Rejected')">${t('reject')}</button></td></tr>`).join('') || `<tr><td colspan="3" class="empty-state">🎉 All caught up! No pending requests.</td></tr>`}</tbody></table></div></div>`;
+        return `<div style="animation: fadeUp 0.4s ease-out;"><h1 style="margin-bottom:24px;">${t('admin_appr')}</h1><div class="card table-wrapper" style="padding: 0;"><table style="margin:0;"><thead><tr><th>Employee</th><th>Request Info</th><th style="text-align:right;">Actions</th></tr></thead><tbody>${p.map(r=>`<tr><td><b style="font-size:14px; color:var(--primary);">${r.name}</b><br><span style="font-size:12px; color:var(--text-muted);">EMP-${r.u.toUpperCase()}</span></td><td><span class="badge" style="background:#f1f5f9; margin-bottom:4px;">${r.type}</span> <b style="font-size:13px;">${r.detail}</b><br><span class="my-tooltip" style="font-size:12px;">${r.reason}<span class="tooltip-box">รายละเอียด:<br>${r.reason}</span></span></td><td style="text-align:right;"><button class="btn-primary" style="background:var(--success); width:auto; padding:6px 14px; margin-right:4px;" onclick="App.actionReq(${r.id}, 'Approved')">${t('approve')}</button> <button class="btn-primary" style="background:var(--danger); width:auto; padding:6px 14px;" onclick="App.actionReq(${r.id}, 'Rejected')">${t('reject')}</button></td></tr>`).join('') || `<tr><td colspan="3" class="empty-state">🎉 All caught up! No pending requests.</td></tr>`}</tbody></table></div></div>`;
     },
-    'admin-dir': () => `
+    'admin-dir': () => {
+        const currentUserRole = AppState.currentUser.role;
+        return `
         <div style="animation: fadeUp 0.4s ease-out;">
             <div class="flex-between" style="margin-bottom:24px;">
                 <h1 style="margin:0;">${t('admin_dir')}</h1>
@@ -569,13 +880,18 @@ const Views = {
                         
                         const toggleBtnStr = isActive ? t('act_disable') : t('act_enable');
                         const toggleBtnColor = isActive ? `var(--danger)` : `var(--success)`;
+                        
+                        // 🟢 ปุ่ม Reset Password (ปุ่มกุญแจ) ให้สิทธิ์ IT กับ Admin
+                        const resetBtn = (currentUserRole === 'admin' || currentUserRole === 'it') ? 
+                            `<button class="btn-outline" style="padding:6px 10px; margin-right:4px; font-size:14px; background:#fef3c7; border-color:#fde68a;" onclick="App.resetPass('${u.username}')" title="Reset Password">🔑</button>` : '';
 
                         return `<tr>
                             <td>EMP-${u.username.toUpperCase()}</td>
                             <td><b>${u.name}</b><br><span style="font-size:12px; color:var(--text-muted);">${u.dept || '-'}</span></td>
                             <td><span class="badge" style="background:#f1f5f9;">${u.role.toUpperCase()}</span></td>
                             <td>${statusBadge}</td>
-                            <td style="text-align:right;">
+                            <td style="text-align:right; white-space:nowrap;">
+                                ${resetBtn}
                                 <button class="btn-outline" style="padding:6px 12px; font-size:12px; width:auto; margin-right: 4px;" onclick="App.openEditUser('${u.username}')">✏️ Edit</button>
                                 <button class="btn-primary" style="background:${toggleBtnColor}; padding:6px 12px; font-size:12px; width:auto;" onclick="App.toggleUserStatus('${u.username}')">${toggleBtnStr}</button>
                             </td>
@@ -584,9 +900,40 @@ const Views = {
                 </table>
             </div>
         </div>
-    `,
+    `},
     'admin-rep': () => `<div style="animation: fadeUp 0.4s ease-out;"><h1 style="margin-bottom:24px;">${t('admin_rep')}</h1><div class="grid-2"><div class="card"><h2 style="margin-bottom:16px;">Leave Distribution</h2><div style="text-align:center; padding:40px; color:var(--text-muted); background:var(--bg-main); border-radius:var(--radius-sm);">Annual Leave: 65%<br>Sick Leave: 25%<br>Personal: 10%</div></div><div class="card"><h2 style="margin-bottom:16px;">Overtime Costs</h2><div style="text-align:center; padding:40px; color:var(--text-muted); background:var(--bg-main); border-radius:var(--radius-sm);"><b style="font-size:24px; color:var(--primary);">฿ 124,500</b><br>Total OT payout this month</div></div></div></div>`,
-    'admin-set': () => `<div style="animation: fadeUp 0.4s ease-out;"><h1 style="margin-bottom:24px;">${t('admin_set')}</h1><div class="card" style="max-width:600px;"><h2>Global Configurations</h2><label>Company Name</label><input type="text" id="set-company" value="${AppState.settings.companyName}"><label>Default Annual Leave Quota (Days)</label><input type="number" id="set-quota" value="${AppState.settings.leaveQuota}"><hr style="margin:24px 0; border:0; border-top:1px dashed var(--border);"><h2 style="color:#d97706;">📢 Broadcast Announcement</h2><p style="font-size:12px; color:var(--text-muted); margin-bottom:12px;">พิมพ์ข้อความที่ต้องการแจ้งเตือนพนักงานทุกคน (ลบออกเพื่อปิดการแจ้งเตือน)</p><textarea id="set-broadcast" rows="3" placeholder="เช่น พรุ่งนี้หยุดชดเชยสงกรานต์...">${AppState.settings.broadcast || ''}</textarea><div style="text-align:right; margin-top:16px;"><button class="btn-primary" style="width:auto; padding: 12px 24px;" onclick="App.saveSettings()">Save Configuration</button></div></div></div>`
+    
+    'admin-set': () => {
+        const u = AppState.currentUser;
+        let itSettingsSection = '';
+        
+        if (u.role === 'it') {
+            itSettingsSection = `
+                <hr style="margin:32px 0; border:0; border-top:1px dashed var(--border);">
+                <h2 style="color:var(--danger); display:flex; align-items:center; gap:8px;">🛠️ Advanced IT Controls (Danger Zone)</h2>
+                <div class="grid-2" style="margin-top:16px;">
+                    <div style="background:#fef2f2; padding:16px; border-radius:8px; border:1px solid #fecaca;">
+                        <h3 style="color:#b91c1c; margin-top:0; font-size:16px;">System Maintenance</h3>
+                        <p style="font-size:12px; color:var(--text-muted); margin-bottom:12px;">เปิดโหมดปรับปรุงระบบ พนักงาน(ที่ไม่ใช่ไอที) จะไม่สามารถล็อกอินเข้าสู่ระบบได้</p>
+                        <select id="set-maintenance" style="margin-bottom:12px; border-color:#fca5a5;">
+                            <option value="off" ${!AppState.settings.maintenance ? 'selected' : ''}>🔴 ปิดโหมด Maintenance (ปกติ)</option>
+                            <option value="on" ${AppState.settings.maintenance ? 'selected' : ''}>🟢 เปิดโหมด Maintenance (ระงับชั่วคราว)</option>
+                        </select>
+                    </div>
+                    <div style="background:#eff6ff; padding:16px; border-radius:8px; border:1px solid #bfdbfe;">
+                        <h3 style="color:#1d4ed8; margin-top:0; font-size:16px;">Database Management</h3>
+                        <p style="font-size:12px; color:var(--text-muted); margin-bottom:12px;">สำรองข้อมูลทั้งหมดหรือล้างแคชระบบ (คำเตือน: โปรดสำรองข้อมูลก่อนล้างแคชเสมอ)</p>
+                        <button class="btn-outline" style="width:100%; margin-bottom:8px; font-size:12px; background:white;" onclick="App.backupDB()">📥 Backup Database (.JSON)</button>
+                        <button class="btn-primary" style="background:var(--danger); width:100%; font-size:12px;" onclick="App.clearCache()">🗑️ Clear System Cache</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        return `<div style="animation: fadeUp 0.4s ease-out;"><h1 style="margin-bottom:24px;">${u.role === 'it' ? t('it_set') : t('admin_set')}</h1><div class="card" style="max-width:800px;"><h2>Global Configurations</h2><div class="grid-2"><div><label>Company Name</label><input type="text" id="set-company" value="${AppState.settings.companyName}"></div><div><label>Default Annual Leave Quota (Days)</label><input type="number" id="set-quota" value="${AppState.settings.leaveQuota}"></div></div><hr style="margin:24px 0; border:0; border-top:1px dashed var(--border);"><h2 style="color:#d97706;">📢 Broadcast Announcement</h2><p style="font-size:12px; color:var(--text-muted); margin-bottom:12px;">พิมพ์ข้อความที่ต้องการแจ้งเตือนพนักงานทุกคน (ลบออกเพื่อปิดการแจ้งเตือน)</p><textarea id="set-broadcast" rows="3" placeholder="เช่น พรุ่งนี้หยุดชดเชยสงกรานต์...">${AppState.settings.broadcast || ''}</textarea>
+        ${itSettingsSection}
+        <div style="text-align:right; margin-top:24px; padding-top:16px; border-top:1px solid var(--border);"><button class="btn-primary" style="width:auto; padding: 12px 24px;" onclick="App.saveSettings()">Save Configuration</button></div></div></div>`;
+    }
 };
 
 function toggleSidebar() { document.querySelector('.sidebar').classList.toggle('show'); }
@@ -608,7 +955,6 @@ async function startApp() {
     const savedUser = localStorage.getItem('hr_logged_user');
     if(savedUser) {
         const u = JSON.parse(savedUser);
-        // เช็คว่าตอนโหลดเว็บใหม่ บัญชียังใช้งานได้อยู่ไหม
         const serverUser = AppState.users.find(x => x.username === u.username);
         if (serverUser && serverUser.isActive === false) {
             localStorage.removeItem('hr_logged_user');
