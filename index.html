@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Leave & Attendance Management</title>
+    <title>Enterprise HR Management System</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -11,21 +12,24 @@
     <div id="auth-view">
         <div class="auth-card">
             <div style="text-align: center; margin-bottom: 32px;">
-                <h1 style="margin: 0; font-size: 22px;">Leave & Attendance</h1>
-                <p class="text-muted th-en" data-th="Management System" data-en="Management System" style="font-size: 12px; text-transform: uppercase; letter-spacing: 1px; margin-top: 4px;">Management System</p>
+                <h1 style="margin: 0; font-size: 24px; color: var(--primary);">Leave & Attendance</h1>
+                <p class="text-muted" style="font-size: 13px; font-weight: 500; margin-top: 4px;">S&J International Co., Ltd.</p>
+                <div style="margin-top: 12px; display: inline-block; padding: 4px 12px; background: var(--bg-main); border: 1px solid var(--border); border-radius: 20px; font-size: 11px; color: var(--text-muted); letter-spacing: 0.5px;">
+                    Enterprise System v1.2.0
+                </div>
             </div>
             
             <div id="form-login">
                 <form onsubmit="event.preventDefault(); Auth.login();">
                     <label class="th-en" data-th="รหัสพนักงาน / Username" data-en="Employee ID / Username">รหัสพนักงาน / Username</label>
-                   <input type="text" id="login-user" value="" required>
+                   <input type="text" id="login-user" placeholder="Enter your ID" required>
                     <label class="th-en" data-th="รหัสผ่าน (Password)" data-en="Password">รหัสผ่าน (Password)</label>
-                    <input type="password" id="login-pass" value="" required> 
-                    <button type="submit" class="btn-secure" style="margin-top: 16px;">Login</button>
+                    <input type="password" id="login-pass" placeholder="••••••••" required> 
+                    <button type="submit" class="btn-secure" style="margin-top: 16px;"><i class="fas fa-sign-in-alt"></i> Login to Workspace</button>
                 </form>
                 <div style="margin-top: 24px; text-align: center; font-size: 13px; color: var(--text-muted);">
-                    <span class="th-en" data-th="ไม่มีบัญชีผู้ใช้?" data-en="Don't have an account?">ไม่มีบัญชีผู้ใช้?</span> 
-                    <button class="btn-text th-en" data-th="สมัครสมาชิก" data-en="Register" onclick="Auth.toggle('register')">สมัครสมาชิก</button>
+                    <span class="th-en" data-th="พนักงานใหม่?" data-en="New employee?">พนักงานใหม่?</span> 
+                    <button class="btn-text th-en" data-th="ลงทะเบียนระบบ" data-en="Register access" onclick="Auth.toggle('register')">ลงทะเบียนระบบ</button>
                 </div>
             </div>
 
@@ -39,19 +43,23 @@
                     <input type="password" id="reg-pass" required>
                     <label class="th-en" data-th="ระดับสิทธิ์ (Role)" data-en="System Role">ระดับสิทธิ์ (Role)</label>
                   <select id="reg-role">
-                        <option value="employee">พนักงานทั่วไป (Employee)</option>
-                        <option value="admin">ผู้จัดการ/HR (Admin)</option>
-                         <option value="it">ฝ่ายไอที (IT Support)</option>
+                        <option value="employee">Staff (Employee)</option>
+                        <option value="admin">Manager (HR)</option>
+                         <option value="it">System Administrator (IT)</option>
                         </select>
-                    <button type="submit" class="btn-primary" style="margin-top: 16px; padding: 14px; width: 100%;">Create Account</button>
+                    <button type="submit" class="btn-primary" style="margin-top: 16px; padding: 14px; width: 100%;"><i class="fas fa-user-plus"></i> Create Account</button>
                 </form>
                 <div style="margin-top: 24px; text-align: center; font-size: 13px;">
-                    <button class="btn-text th-en" data-th="ย้อนกลับไปหน้าล็อกอิน" data-en="Back to Login" onclick="Auth.toggle('login')">ย้อนกลับ</button>
+                    <button class="btn-text th-en" data-th="ย้อนกลับไปหน้าล็อกอิน" data-en="Back to Login" onclick="Auth.toggle('login')"><i class="fas fa-arrow-left"></i> ย้อนกลับ</button>
                 </div>
             </div>
             
             <div style="margin-top: 24px; text-align: center; border-top: 1px solid var(--border); padding-top: 16px;">
-            <button type="button" class="lang-switch" onclick="toggleLanguage(event)">🌐 Switch Language</button>
+            <button type="button" class="lang-switch" onclick="toggleLanguage(event)"><i class="fas fa-globe"></i> Switch Language</button>
+            </div>
+            
+            <div style="text-align: center; margin-top: 16px; font-size: 11px; color: #94a3b8;">
+                Developed & Maintained by IT Department
             </div>
         </div>
     </div>
@@ -61,31 +69,31 @@
             <div class="sidebar-header">
                 <div style="display: flex; align-items: center; gap: 12px;">
                     <div>
-                        <div style="font-weight: 700; font-size: 15px; letter-spacing: -0.01em;">Leave & Attendance</div>
-                        <div style="font-size: 10px; color: #94a3b8; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 2px;">Portal</div>
+                        <div style="font-weight: 700; font-size: 15px; letter-spacing: -0.01em;">S&J International</div>
+                        <div style="font-size: 10px; color: #94a3b8; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 2px;">HR Portal v1.2</div>
                     </div>
                 </div>
             </div>
             <nav class="nav-menu" id="nav-menu"></nav>
             <div style="padding: 24px; background: rgba(0,0,0,0.2);">
-                <button style="width:100%; background:rgba(255,255,255,0.1); color:white; border:1px solid rgba(255,255,255,0.1); padding:12px; border-radius:var(--radius-sm); cursor:pointer;" onclick="Auth.logout()">🚪 <span class="th-en" data-th="ออกจากระบบ" data-en="Sign Out">ออกจากระบบ</span></button>
+                <button style="width:100%; background:rgba(255,255,255,0.1); color:white; border:1px solid rgba(255,255,255,0.1); padding:12px; border-radius:var(--radius-sm); cursor:pointer;" onclick="Auth.logout()"><i class="fas fa-sign-out-alt"></i> <span class="th-en" data-th="ออกจากระบบ" data-en="Sign Out">ออกจากระบบ</span></button>
             </div>
         </aside>
 
         <main class="main-content">
             <header class="topbar no-print">
                 
-                <button class="hamburger-btn" onclick="toggleSidebar()">☰</button>
+                <button class="hamburger-btn" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
 
                 <div class="tools-area">
                     <button class="lang-switch" onclick="toggleLanguage()" id="top-lang-btn">EN</button>
                     <div class="bell-icon" onclick="Notif.toggle(); document.getElementById('notif-badge').style.display = 'none';">
-                        🔔 <span class="bell-badge" id="notif-badge" style="display:none;">0</span>
+                        <i class="fas fa-bell"></i> <span class="bell-badge" id="notif-badge" style="display:none;">0</span>
                     </div>
                 </div>
 
                 <div class="notif-dropdown" id="notif-dropdown">
-                    <div style="padding: 16px 20px; border-bottom: 1px solid var(--border); font-weight: 700; font-size: 14px; background: #f8fafc;">Notifications</div>
+                    <div style="padding: 16px 20px; border-bottom: 1px solid var(--border); font-weight: 700; font-size: 14px; background: #f8fafc;">System Notifications</div>
                     <div id="notif-list"></div>
                 </div>
 
@@ -97,7 +105,13 @@
                     <img src="" id="avatar-img" style="width: 40px; height: 40px; border-radius: 50%; box-shadow: var(--shadow-sm); border: 2px solid white; object-fit: cover;" alt="Avatar">
                 </div>
             </header>
+            
             <div class="content-area" id="page-content"></div>
+            
+            <footer style="padding: 20px 32px; text-align: center; border-top: 1px solid var(--border); color: var(--text-muted); font-size: 12px; background: var(--bg-main);">
+                &copy; 2026 S&J International Co., Ltd. All rights reserved. | IT Support Division
+            </footer>
+            
         </main>
     </div>
 
@@ -105,7 +119,7 @@
         <div class="modal-content">
             <div class="flex-between" style="margin-bottom: 24px;">
                 <h1 style="margin:0; font-size: 20px;" class="th-en" data-th="ขอลางาน" data-en="Request Leave">ขอลางาน</h1>
-                <button class="btn-text" style="font-size: 20px; color: var(--text-muted);" onclick="App.closeModal('modal-leave')">✕</button>
+                <button class="btn-text" style="font-size: 20px; color: var(--text-muted);" onclick="App.closeModal('modal-leave')"><i class="fas fa-times"></i></button>
             </div>
             <form onsubmit="event.preventDefault(); App.submitLeave();">
                 <div class="grid-2" style="margin-bottom: 16px;">
@@ -131,7 +145,7 @@
                 <textarea id="lv-reason" required rows="2"></textarea>
                 <div style="display: flex; gap: 12px; margin-top: 16px;">
                     <button type="button" class="btn-outline" style="flex: 1;" onclick="App.closeModal('modal-leave')">Cancel</button>
-                    <button type="submit" class="btn-primary" style="flex: 2;">Submit Request</button>
+                    <button type="submit" class="btn-primary" style="flex: 2;"><i class="fas fa-paper-plane"></i> Submit Request</button>
                 </div>
             </form>
         </div>
@@ -141,7 +155,7 @@
         <div class="modal-content">
             <div class="flex-between" style="margin-bottom: 24px;">
                 <h1 style="margin:0; font-size: 20px;" class="th-en" data-th="บันทึกขอทำ OT" data-en="Request OT">บันทึกขอทำ OT</h1>
-                <button class="btn-text" style="font-size: 20px; color: var(--text-muted);" onclick="App.closeModal('modal-ot')">✕</button>
+                <button class="btn-text" style="font-size: 20px; color: var(--text-muted);" onclick="App.closeModal('modal-ot')"><i class="fas fa-times"></i></button>
             </div>
             <form onsubmit="event.preventDefault(); App.submitOT();">
                 <div class="grid-2" style="margin-bottom: 16px;">
@@ -152,7 +166,7 @@
                 <textarea id="ot-reason" required rows="2"></textarea>
                 <div style="display: flex; gap: 12px; margin-top: 16px;">
                      <button type="button" class="btn-outline" style="flex: 1;" onclick="App.closeModal('modal-ot')">Cancel</button>
-                     <button type="submit" class="btn-primary" style="flex: 2;">Submit Request</button>
+                     <button type="submit" class="btn-primary" style="flex: 2;"><i class="fas fa-paper-plane"></i> Submit Request</button>
                 </div>
             </form>
         </div>
