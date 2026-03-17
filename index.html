@@ -15,7 +15,7 @@
                 <h1 style="margin: 0; font-size: 24px; color: var(--primary);">Leave & Attendance</h1>
                 <p class="text-muted" style="font-size: 13px; font-weight: 500; margin-top: 4px;">S&J International Co., Ltd.</p>
                 <div style="margin-top: 12px; display: inline-block; padding: 4px 12px; background: var(--bg-main); border: 1px solid var(--border); border-radius: 20px; font-size: 11px; color: var(--text-muted); letter-spacing: 0.5px;">
-                    Enterprise System v1.2.0
+                    Enterprise System v1.3.0
                 </div>
             </div>
             
@@ -43,10 +43,11 @@
                     <input type="password" id="reg-pass" required>
                     <label class="th-en" data-th="ระดับสิทธิ์ (Role)" data-en="System Role">ระดับสิทธิ์ (Role)</label>
                   <select id="reg-role">
-                        <option value="employee">Staff (Employee)</option>
+                        <option value="employee">Staff (พนักงานทั่วไป)</option>
+                        <option value="head">Supervisor (หัวหน้างาน)</option> 
                         <option value="admin">Manager (HR)</option>
-                         <option value="it">System Administrator (IT)</option>
-                        </select>
+                        <option value="it">System Administrator (IT)</option>
+                  </select>
                     <button type="submit" class="btn-primary" style="margin-top: 16px; padding: 14px; width: 100%;"><i class="fas fa-user-plus"></i> Create Account</button>
                 </form>
                 <div style="margin-top: 24px; text-align: center; font-size: 13px;">
@@ -70,7 +71,7 @@
                 <div style="display: flex; align-items: center; gap: 12px;">
                     <div>
                         <div style="font-weight: 700; font-size: 15px; letter-spacing: -0.01em;">S&J International</div>
-                        <div style="font-size: 10px; color: #94a3b8; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 2px;">HR Portal v1.2</div>
+                        <div style="font-size: 10px; color: #94a3b8; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 2px;">HR Portal v1.3</div>
                     </div>
                 </div>
             </div>
@@ -82,9 +83,7 @@
 
         <main class="main-content">
             <header class="topbar no-print">
-                
                 <button class="hamburger-btn" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
-
                 <div class="tools-area">
                     <button class="lang-switch" onclick="toggleLanguage()" id="top-lang-btn">EN</button>
                     <div class="bell-icon" onclick="Notif.toggle(); document.getElementById('notif-badge').style.display = 'none';">
@@ -111,7 +110,6 @@
             <footer style="padding: 20px 32px; text-align: center; border-top: 1px solid var(--border); color: var(--text-muted); font-size: 12px; background: var(--bg-main);">
                 &copy; 2026 S&J International Co., Ltd. All rights reserved. | IT Support Division
             </footer>
-            
         </main>
     </div>
 
@@ -143,6 +141,10 @@
                 </div>
                 <label class="th-en" data-th="เหตุผลเพิ่มเติม" data-en="Reason">เหตุผล</label>
                 <textarea id="lv-reason" required rows="2"></textarea>
+
+                <label class="th-en" data-th="แนบเอกสาร (ถ้ามี)" data-en="Attach Document (Optional)">แนบเอกสาร (ใบรับรองแพทย์ ฯลฯ)</label>
+                <input type="file" id="lv-file" accept="image/*,.pdf" style="margin-bottom: 16px; background: white;">
+
                 <div style="display: flex; gap: 12px; margin-top: 16px;">
                     <button type="button" class="btn-outline" style="flex: 1;" onclick="App.closeModal('modal-leave')">Cancel</button>
                     <button type="submit" class="btn-primary" style="flex: 2;"><i class="fas fa-paper-plane"></i> Submit Request</button>
@@ -164,6 +166,10 @@
                 </div>
                 <label class="th-en" data-th="รายละเอียดงาน" data-en="Task">รายละเอียดงาน</label>
                 <textarea id="ot-reason" required rows="2"></textarea>
+
+                <label class="th-en" data-th="แนบหลักฐาน (ถ้ามี)" data-en="Attach Evidence (Optional)">แนบหลักฐาน (ถ้ามี)</label>
+                <input type="file" id="ot-file" accept="image/*,.pdf" style="margin-bottom: 16px; background: white;">
+
                 <div style="display: flex; gap: 12px; margin-top: 16px;">
                      <button type="button" class="btn-outline" style="flex: 1;" onclick="App.closeModal('modal-ot')">Cancel</button>
                      <button type="submit" class="btn-primary" style="flex: 2;"><i class="fas fa-paper-plane"></i> Submit Request</button>
@@ -172,15 +178,25 @@
         </div>
     </div>
 
+  <div id="chat-widget" class="chat-widget" style="display: none;">
+        <div class="chat-header" onclick="Chat.toggle(event)"> <i class="fas fa-headset"></i> HR Helpdesk
+            <span id="chat-unread" class="badge" style="background:#ef4444; color:white; display:none; margin-left:auto; border:none;">New</span>
+        </div>
+        <div class="chat-body" id="chat-body" style="display:none;">
+            <div id="chat-messages" class="chat-messages"></div>
+            <form class="chat-input" onsubmit="event.preventDefault(); Chat.send();">
+                <input type="text" id="chat-text" placeholder="Type a message..." required autocomplete="off">
+                <button type="submit" class="btn-primary" style="padding: 10px 14px;"><i class="fas fa-paper-plane"></i></button>
+            </form>
+        </div>
+    </div>
+
     <div id="toast-container"></div>
 
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
-    
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
     <script src="script.js"></script>
 </body>
 </html>

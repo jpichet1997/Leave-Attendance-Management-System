@@ -78,11 +78,12 @@ const defaultState = {
     users: [
         { username: 'admin', password: '123', name: 'HR Manager', role: 'admin', dept: 'Human Resources', isActive: true },
         { username: 'user', password: '123', name: 'John Doe', role: 'employee', dept: 'Marketing', isActive: true },
+        { username: 'head', password: '123', name: 'Sales Manager', role: 'head', dept: 'Sales', isActive: true }, 
         { username: 'it', password: '123', name: 'IT Administrator', role: 'it', dept: 'IT Operations', isActive: true }
     ],
     currentUser: null, 
     dailyClock: {}, 
-    leaveBalances: { 'user': { annual: 8.5, sick: 28 }, 'admin': { annual: 15, sick: 30 }, 'it': { annual: 15, sick: 30 } }, 
+    leaveBalances: { 'user': { annual: 8.5, sick: 28 }, 'admin': { annual: 15, sick: 30 }, 'head': { annual: 12, sick: 30 }, 'it': { annual: 15, sick: 30 } }, 
     requests: [], 
     timeLogs: [], 
     notifications: [], 
@@ -90,9 +91,10 @@ const defaultState = {
     profiles: { 
         'admin': { email: 'admin@sj-inter.com', phone: '089-999-9999', startDate: '2020-01-01', avatar: '' },
         'user': { email: 'john.d@sj-inter.com', phone: '081-234-5678', startDate: '2024-01-15', avatar: '' },
+        'head': { email: 'manager@sj-inter.com', phone: '085-555-5555', startDate: '2021-06-01', avatar: '' },
         'it': { email: 'it.admin@sj-inter.com', phone: '088-888-8888', startDate: '2022-05-10', avatar: '' }
     },
-    settings: { companyName: 'S&J International Co., Ltd.', leaveQuota: 10, broadcast: '', maintenance: false }
+    settings: { companyName: 'For-You International Co.,Ltd.', leaveQuota: 10, broadcast: '', maintenance: false }
 };
 
 let AppState = defaultState;
@@ -129,6 +131,13 @@ let isSalaryVisible = false;
 let calMonth = new Date().getMonth();
 let calYear = new Date().getFullYear();
 
+const fileToBase64 = (file) => new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = error => reject(error);
+});
+
 // --- 3. App Core Logic ---
 const Notif = {
     push: (user, msg) => {
@@ -160,6 +169,7 @@ const Auth = {
         
         let defDept = 'General Staff';
         if(role === 'admin') defDept = 'Human Resources';
+        if(role === 'head') defDept = 'Department Head'; 
         if(role === 'it') defDept = 'IT Operations';
 
         AppState.users.push({ username: user, password: pass, name: name, role: role, dept: defDept, isActive: true });
@@ -239,6 +249,18 @@ const App = {
                 <div class="nav-item" onclick="App.nav('prof', this)"><i class="fas fa-user-circle"></i> ${t('prof')}</div>`;
             App.nav('admin-dash', menu.children[1]);
             
+        } else if (u.role === 'head') {
+             menu.innerHTML = `
+                <div class="nav-divider">Supervisor Workspace</div>
+                <div class="nav-item active" onclick="App.nav('home', this)"><i class="fas fa-home"></i> ${t('dash')}</div>
+                <div class="nav-item" onclick="App.nav('admin-approve', this)"><i class="fas fa-check-circle"></i> Team Approvals <span class="badge bg-danger" style="color:white; margin-left:auto;" id="badge-pending">0</span></div>
+                <div class="nav-divider">Personal Records</div>
+                <div class="nav-item" onclick="App.nav('time', this)"><i class="fas fa-clock"></i> ${t('time')}</div>
+                <div class="nav-item" onclick="App.nav('payslip', this)"><i class="fas fa-file-invoice-dollar"></i> ${t('slip')}</div>
+                <div class="nav-divider">Settings</div>
+                <div class="nav-item" onclick="App.nav('prof', this)"><i class="fas fa-user-circle"></i> ${t('prof')}</div>`;
+            App.nav('home', menu.children[1]);
+            
         } else if (u.role === 'it') {
             menu.innerHTML = `
                 <div class="nav-divider">IT Operations</div>
@@ -262,7 +284,13 @@ const App = {
                 <div class="nav-item" onclick="App.nav('prof', this)"><i class="fas fa-user"></i> ${t('prof')}</div>`;
             App.nav('home', menu.children[1]);
         }
+        
         Notif.render(); App.updateBadge();
+        
+        // 🟢 เปิดใช้งานวิดเจ็ต Chat ทุกครั้งที่ล็อกอินสำเร็จ
+        const chatWidget = document.getElementById('chat-widget');
+        if(chatWidget) chatWidget.style.display = 'block';
+        Chat.init(); 
     },
     
     nav: (page, el) => {
@@ -296,7 +324,7 @@ const App = {
 
     getSalary: () => {
         const u = AppState.currentUser;
-        if(u.role === 'admin' || u.role === 'it') { return { base: 85000, ot: 0, allow: 5000, sso: 750, tax: 6500, absent: 0, earn: 90000, deduct: 7250, net: 82750 }; } 
+        if(u.role === 'admin' || u.role === 'it' || u.role === 'head') { return { base: 85000, ot: 0, allow: 5000, sso: 750, tax: 6500, absent: 0, earn: 90000, deduct: 7250, net: 82750 }; } 
         else { return { base: 35000, ot: 4250, allow: 1500, sso: 750, tax: 1250, absent: 0, earn: 40750, deduct: 2000, net: 38750 }; }
     },
 
@@ -407,6 +435,7 @@ const App = {
                             <label>System Role</label>
                             <select id="edit-u-role">
                                 <option value="employee" ${u.role==='employee'?'selected':''}>Employee</option>
+                                <option value="head" ${u.role==='head'?'selected':''}>Supervisor</option>
                                 <option value="admin" ${u.role==='admin'?'selected':''}>Admin (HR)</option>
                                 <option value="it" ${u.role==='it'?'selected':''}>IT Support</option>
                             </select>
@@ -558,49 +587,97 @@ const App = {
             st.innerHTML = `<span class="text-muted"><i class="fas fa-bed"></i> Currently Offline</span>`; 
         }
     },
-    submitLeave: () => {
+    
+    submitLeave: async () => {
         const u = AppState.currentUser.username, k = document.getElementById('lv-type').value.includes('Annual') ? 'annual' : 'sick';
         let days = document.getElementById('lv-format').value === 'hourly' ? 0.125 : 1; 
         if(!AppState.leaveBalances[u]) AppState.leaveBalances[u] = { annual: AppState.settings.leaveQuota, sick: 30 };
         if(AppState.leaveBalances[u][k] < days) return App.toast('Insufficient leave balance.', 'error');
+        
+        let attachmentBase64 = null;
+        const fileInput = document.getElementById('lv-file');
+        if (fileInput && fileInput.files[0]) {
+            try { attachmentBase64 = await fileToBase64(fileInput.files[0]); } catch(e) { console.error(e); }
+        }
+
         AppState.leaveBalances[u][k] -= days;
-        AppState.requests.unshift({ id: Date.now(), type: 'Leave', u: u, name: AppState.currentUser.name, detail: document.getElementById('lv-type').value, reason: document.getElementById('lv-reason').value, status: 'Pending' });
+        AppState.requests.unshift({ 
+            id: Date.now(), type: 'Leave', u: u, name: AppState.currentUser.name, 
+            detail: document.getElementById('lv-type').value, 
+            reason: document.getElementById('lv-reason').value, 
+            attachment: attachmentBase64, 
+            status: 'Pending (Supervisor)'
+        });
         
         App.addLog('Workflow', `Submitted Leave Request`);
-        DB.save(AppState); App.closeModal('modal-leave'); App.toast('Request submitted for approval.'); App.nav('time', document.querySelectorAll('.nav-item')[1]); 
+        DB.save(AppState); 
+        if(fileInput) fileInput.value = ''; 
+        App.closeModal('modal-leave'); App.toast('Request submitted to Supervisor.'); App.nav('time', document.querySelectorAll('.nav-item')[1]); 
     },
-    submitOT: () => {
-        AppState.requests.unshift({ id: Date.now(), type: 'OT', u: AppState.currentUser.username, name: AppState.currentUser.name, detail: document.getElementById('ot-hours').value + ' Hrs', reason: document.getElementById('ot-reason').value, status: 'Pending' });
+    
+    submitOT: async () => {
+        let attachmentBase64 = null;
+        const fileInput = document.getElementById('ot-file');
+        if (fileInput && fileInput.files[0]) {
+            try { attachmentBase64 = await fileToBase64(fileInput.files[0]); } catch(e) { console.error(e); }
+        }
+
+        AppState.requests.unshift({ 
+            id: Date.now(), type: 'OT', u: AppState.currentUser.username, name: AppState.currentUser.name, 
+            detail: document.getElementById('ot-hours').value + ' Hrs', 
+            reason: document.getElementById('ot-reason').value, 
+            attachment: attachmentBase64, 
+            status: 'Pending (Supervisor)'
+        });
+        
         App.addLog('Workflow', `Submitted OT Request`);
-        DB.save(AppState); App.closeModal('modal-ot'); App.toast('OT request submitted.'); App.nav('time', document.querySelectorAll('.nav-item')[1]);
+        DB.save(AppState); 
+        if(fileInput) fileInput.value = '';
+        App.closeModal('modal-ot'); App.toast('OT request submitted to Supervisor.'); App.nav('time', document.querySelectorAll('.nav-item')[1]);
     },
 
     sendLineAlert: (employee, type, status) => {
         const webhookUrl = "https://hook.eu1.make.com/63miskvj947chdguwvz553l12ikk9qqb"; 
-        fetch(webhookUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                employeeName: employee,
-                requestType: type,
-                result: status,
-                time: new Date().toLocaleString('en-GB')
-            })
-        }).catch(err => console.error("Webhook Error:", err));
+        fetch(webhookUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ employeeName: employee, requestType: type, result: status, time: new Date().toLocaleString('en-GB') }) }).catch(err => console.error("Webhook Error:", err));
     },
 
-    actionReq: (id, stat) => {
+    actionReq: (id, actionType) => {
         const r = AppState.requests.find(x => x.id === id);
+        const userRole = AppState.currentUser.role;
+        
         if(r) { 
-            r.status = stat; 
-            App.addLog('Workflow Action', `${stat} request for ${r.name} (${r.type})`); 
+            let newStatus = actionType; 
+
+            if (actionType === 'Approved') {
+                if (userRole === 'head') {
+                    newStatus = 'Pending (HR)'; 
+                } else if (userRole === 'admin') {
+                    newStatus = 'Approved';
+                }
+            }
+
+            r.status = newStatus; 
+            App.addLog('Workflow Action', `${newStatus} request for ${r.name} (${r.type}) by ${userRole}`); 
             DB.save(AppState); 
-            App.toast(`Request marked as ${stat}`); 
-            App.sendLineAlert(r.name, r.type, stat);
+            App.toast(`Request marked as ${newStatus}`); 
+            App.sendLineAlert(r.name, r.type, newStatus); 
             App.nav('admin-approve'); 
             App.updateBadge(); 
-            Notif.push(r.u, `Workflow Update: Your ${r.type} request was ${stat.toLowerCase()}.`); 
+            Notif.push(r.u, `Workflow Update: Your ${r.type} request is now ${newStatus}.`); 
         }
+    },
+    
+    updateBadge: () => { 
+        const b = document.getElementById('badge-pending');
+        if(!b || !AppState.currentUser) return;
+        const role = AppState.currentUser.role;
+        let count = 0;
+        
+        if (role === 'head') count = AppState.requests.filter(r => r.status === 'Pending (Supervisor)' || r.status === 'Pending').length;
+        if (role === 'admin') count = AppState.requests.filter(r => r.status === 'Pending (HR)').length;
+        
+        b.innerText = count; 
+        b.style.display = count > 0 ? 'inline-block' : 'none'; 
     },
 
     renderChart: () => {
@@ -638,13 +715,11 @@ const App = {
         });
     },
 
-    // 🟢 กราฟ IT Dashboard ปรับใหม่ให้ดูน่าเชื่อถือและสมจริง
     renderITLiveChart: () => {
         if(liveChartInst) liveChartInst.destroy();
         const ctx = document.getElementById('itLiveChart');
         if (!ctx) return;
 
-        // Base load (เซิร์ฟเวอร์มักจะวิ่งอยู่ช่วง 20-35%)
         let currentCpu = 25; 
         const initialData = Array.from({length: 40}, () => {
             currentCpu += (Math.random() * 4) - 2; 
@@ -662,13 +737,13 @@ const App = {
                     backgroundColor: 'rgba(16, 185, 129, 0.05)',
                     borderWidth: 2,
                     fill: true,
-                    tension: 0.4, // สมูทเคิร์ฟ
+                    tension: 0.4, 
                     pointRadius: 0 
                 }]
             },
             options: {
                 maintainAspectRatio: false,
-                animation: false, // ปิด Animation ป้องกันการกระตุกเวลาอัปเดตแบบ Realtime
+                animation: false, 
                 scales: {
                     y: { 
                         min: 0, max: 100, 
@@ -686,19 +761,14 @@ const App = {
             const data = liveChartInst.data.datasets[0].data;
             let lastVal = data[data.length - 1];
             
-            // ขยับค่าแบบมีทิศทาง (Random Walk)
             let change = (Math.random() * 5) - 2.5; 
-            
-            // สุ่มเกิด Spike 2% ของเวลา (จำลองมีคนรันรีพอร์ต)
             if(Math.random() > 0.98) change += 25; 
 
-            // ดึงค่ากลับเข้าเส้นฐาน (Gravity to mean)
             if(lastVal > 60) change -= 2;
             if(lastVal < 15) change += 2;
 
             let newVal = Math.max(2, Math.min(98, lastVal + change));
 
-            // อัปเดตสีตามการโหลด (เขียว -> เหลือง -> แดง)
             let color = '#10b981';
             let bgColor = 'rgba(16, 185, 129, 0.05)';
             if (newVal > 80) { color = '#ef4444'; bgColor = 'rgba(239, 68, 68, 0.05)'; }
@@ -730,69 +800,36 @@ const App = {
     toggleSal: () => { isSalaryVisible = !isSalaryVisible; document.getElementById('salary-val').classList.toggle('masked'); document.getElementById('salary-btn').innerHTML = isSalaryVisible ? `<i class="fas fa-eye-slash"></i> ${t('hide')}` : `<i class="fas fa-eye"></i> ${t('show')}`; },
     switchTab: (id, btn) => { document.querySelectorAll('.tab-btn').forEach(x=>x.classList.remove('active')); btn.classList.add('active'); document.querySelectorAll('.tab-content').forEach(x=>x.classList.remove('active')); document.getElementById(id).classList.add('active'); },
     openModal: (id) => document.getElementById(id).classList.add('show'),
-    closeModal: (id) => document.getElementById(id).classList.remove('show'),
-    updateBadge: () => { const b = document.getElementById('badge-pending'), c = AppState.requests.filter(r=>r.status==='Pending').length; if(b){b.innerText=c; b.style.display=c>0?'inline-block':'none';} },
+    closeModal: (id) => {
+        document.getElementById(id).classList.remove('show');
+        if(document.getElementById('lv-file')) document.getElementById('lv-file').value = '';
+        if(document.getElementById('ot-file')) document.getElementById('ot-file').value = '';
+    },
     toast: (msg, type='primary') => { const box = document.getElementById('toast-container'), t = document.createElement('div'); t.className = 'toast'; t.innerHTML = `<i class="fas ${type==='error'?'fa-exclamation-circle':'fa-check-circle'}" style="margin-right:8px;"></i> ${msg}`; if(type==='error') t.style.borderLeftColor='var(--danger)'; box.appendChild(t); setTimeout(()=>t.remove(), 3500); }
 };
 
 // --- 5. VIEWS ---
 const Views = {
-    // 🟢 หน้า Dashboard พิเศษสำหรับ IT (4 Grid)
     'it-dash': () => {
         const activeUsers = AppState.users.filter(u => u.isActive !== false).length;
         const suspendedUsers = AppState.users.length - activeUsers;
-        const todayLogins = Math.floor(Math.random() * 20) + 5; // ตัวเลขจำลองการ Login วันนี้
+        const todayLogins = Math.floor(Math.random() * 20) + 5; 
         const sysRequests = Math.floor(Math.random() * 5000) + 1200;
         
         return `
         <div style="animation: fadeUp 0.4s ease-out;">
             <h1 style="margin-bottom:24px;"><i class="fas fa-server text-muted"></i> ${t('it_dash')}</h1>
-            
             <div class="grid-4" style="margin-bottom: 24px;">
-                <div class="card" style="padding:20px; border-top: 3px solid var(--primary);">
-                    <h2 style="font-size:12px; color:var(--text-muted); text-transform:uppercase; margin:0;"><i class="fas fa-users"></i> Total Accounts</h2>
-                    <div class="stat-value" style="font-size:28px;">${AppState.users.length}</div>
-                </div>
-                <div class="card" style="padding:20px; border-top: 3px solid var(--success);">
-                    <h2 style="font-size:12px; color:var(--text-muted); text-transform:uppercase; margin:0;"><i class="fas fa-user-check"></i> Active Users</h2>
-                    <div class="stat-value" style="color:var(--success); font-size:28px;">${activeUsers}</div>
-                </div>
-                <div class="card" style="padding:20px; border-top: 3px solid var(--accent);">
-                    <h2 style="font-size:12px; color:var(--text-muted); text-transform:uppercase; margin:0;"><i class="fas fa-sign-in-alt"></i> Today's Logins</h2>
-                    <div class="stat-value" style="color:var(--accent); font-size:28px;">${todayLogins}</div>
-                </div>
-                <div class="card" style="padding:20px; border-top: 3px solid var(--warning);">
-                    <h2 style="font-size:12px; color:var(--text-muted); text-transform:uppercase; margin:0;"><i class="fas fa-network-wired"></i> System Requests</h2>
-                    <div class="stat-value" style="color:var(--warning); font-size:28px;">${sysRequests.toLocaleString()}</div>
-                </div>
+                <div class="card" style="padding:20px; border-top: 3px solid var(--primary);"><h2 style="font-size:12px; color:var(--text-muted); text-transform:uppercase; margin:0;"><i class="fas fa-users"></i> Total Accounts</h2><div class="stat-value" style="font-size:28px;">${AppState.users.length}</div></div>
+                <div class="card" style="padding:20px; border-top: 3px solid var(--success);"><h2 style="font-size:12px; color:var(--text-muted); text-transform:uppercase; margin:0;"><i class="fas fa-user-check"></i> Active Users</h2><div class="stat-value" style="color:var(--success); font-size:28px;">${activeUsers}</div></div>
+                <div class="card" style="padding:20px; border-top: 3px solid var(--accent);"><h2 style="font-size:12px; color:var(--text-muted); text-transform:uppercase; margin:0;"><i class="fas fa-sign-in-alt"></i> Today's Logins</h2><div class="stat-value" style="color:var(--accent); font-size:28px;">${todayLogins}</div></div>
+                <div class="card" style="padding:20px; border-top: 3px solid var(--warning);"><h2 style="font-size:12px; color:var(--text-muted); text-transform:uppercase; margin:0;"><i class="fas fa-network-wired"></i> System Requests</h2><div class="stat-value" style="color:var(--warning); font-size:28px;">${sysRequests.toLocaleString()}</div></div>
             </div>
-
-            <div class="card" style="margin-bottom: 24px;">
-                <div class="flex-between" style="margin-bottom:16px;">
-                    <h2 style="margin:0; display:flex; align-items:center; gap:8px;">
-                        <i class="fas fa-microchip text-muted"></i> Compute Resource Allocation (CPU)
-                    </h2>
-                    <span class="badge" style="background:#ecfdf5; color:#059669;"><i class="fas fa-circle" style="font-size:8px;"></i> Running</span>
-                </div>
-                <div style="height: 250px; width: 100%; position: relative;">
-                    <canvas id="itLiveChart"></canvas>
-                </div>
-            </div>
-
-            <div class="card">
-                <h2 style="margin-bottom:16px;"><i class="fas fa-shield-alt text-muted"></i> System Status</h2>
-                <div style="padding:16px 20px; background:#f8fafc; border:1px solid var(--border); border-radius:var(--radius-sm); display:flex; align-items:center; gap:16px;">
-                    <div style="font-size:24px; color:var(--success);"><i class="fas fa-check-circle"></i></div> 
-                    <div>
-                        <strong style="font-size:14px; color:var(--primary);">All Services Operational</strong><br>
-                        <span style="font-size:12px; color:var(--text-muted);">Database connection verified. Webhook integrations are functioning normally.</span>
-                    </div>
-                </div>
-            </div>
+            <div class="card" style="margin-bottom: 24px;"><div class="flex-between" style="margin-bottom:16px;"><h2 style="margin:0; display:flex; align-items:center; gap:8px;"><i class="fas fa-microchip text-muted"></i> Compute Resource Allocation (CPU)</h2><span class="badge" style="background:#ecfdf5; color:#059669;"><i class="fas fa-circle" style="font-size:8px;"></i> Running</span></div><div style="height: 250px; width: 100%; position: relative;"><canvas id="itLiveChart"></canvas></div></div>
+            <div class="card"><h2 style="margin-bottom:16px;"><i class="fas fa-shield-alt text-muted"></i> System Status</h2><div style="padding:16px 20px; background:#f8fafc; border:1px solid var(--border); border-radius:var(--radius-sm); display:flex; align-items:center; gap:16px;"><div style="font-size:24px; color:var(--success);"><i class="fas fa-check-circle"></i></div> <div><strong style="font-size:14px; color:var(--primary);">All Services Operational</strong><br><span style="font-size:12px; color:var(--text-muted);">Database connection verified. Webhook integrations are functioning normally.</span></div></div></div>
         </div>`;
     },
 
-    // 🟢 หน้า Audit Logs สำหรับ IT
     'it-logs': () => {
         const logs = AppState.auditLogs || [];
         return `
@@ -804,127 +841,91 @@ const Views = {
             <div class="card table-wrapper" style="padding:0;">
                 <table style="margin:0;">
                     <thead><tr><th>Timestamp</th><th>User</th><th>Role</th><th>Event Type</th><th>Details</th></tr></thead>
-                    <tbody>${logs.slice(0, 50).map(l => `
-                        <tr>
-                            <td style="color:var(--text-muted); font-size:12px; white-space:nowrap;">${l.time}</td>
-                            <td><b style="color:var(--primary);">${l.user}</b></td>
-                            <td><span class="badge" style="background:#f1f5f9; color:var(--text-muted); border:1px solid var(--border);">${l.role.toUpperCase()}</span></td>
-                            <td><span class="badge" style="background:var(--accent-light); color:var(--accent);">${l.action}</span></td>
-                            <td style="font-size:13px; color:var(--text-dark);">${l.detail}</td>
-                        </tr>
-                    `).join('') || `<tr><td colspan="5" class="empty-state"><i class="fas fa-search fa-2x" style="color:var(--border); margin-bottom:8px;"></i><br>No audit logs available.</td></tr>`}</tbody>
+                    <tbody>${logs.slice(0, 50).map(l => `<tr><td style="color:var(--text-muted); font-size:12px; white-space:nowrap;">${l.time}</td><td><b style="color:var(--primary);">${l.user}</b></td><td><span class="badge" style="background:#f1f5f9; color:var(--text-muted); border:1px solid var(--border);">${l.role.toUpperCase()}</span></td><td><span class="badge" style="background:var(--accent-light); color:var(--accent);">${l.action}</span></td><td style="font-size:13px; color:var(--text-dark);">${l.detail}</td></tr>`).join('') || `<tr><td colspan="5" class="empty-state"><i class="fas fa-search fa-2x" style="color:var(--border); margin-bottom:8px;"></i><br>No audit logs available.</td></tr>`}</tbody>
                 </table>
             </div>
         </div>`;
     },
 
     'home': () => {
-        const u = AppState.currentUser.username;
-        const bal = AppState.leaveBalances[u] ? AppState.leaveBalances[u].annual : 0;
-        const sal = App.getSalary(); 
-        const broadcastMsg = AppState.settings.broadcast ? 
-            `<div style="background: #fffbeb; border-left: 4px solid #f59e0b; padding: 12px 16px; margin-bottom: 24px; border-radius: var(--radius-sm); color: #b45309; display: flex; gap: 12px; align-items: flex-start; box-shadow: var(--shadow-sm);"><div style="font-size: 18px; margin-top:2px;"><i class="fas fa-bullhorn"></i></div><div><strong style="display:block; margin-bottom:2px; font-size:13px;">Corporate Announcement</strong><span style="font-size:13px;">${AppState.settings.broadcast}</span></div></div>` : '';
-
+        const u = AppState.currentUser.username, bal = AppState.leaveBalances[u] ? AppState.leaveBalances[u].annual : 0, sal = App.getSalary(); 
+        const broadcastMsg = AppState.settings.broadcast ? `<div style="background: #fffbeb; border-left: 4px solid #f59e0b; padding: 12px 16px; margin-bottom: 24px; border-radius: var(--radius-sm); color: #b45309; display: flex; gap: 12px; align-items: flex-start; box-shadow: var(--shadow-sm);"><div style="font-size: 18px; margin-top:2px;"><i class="fas fa-bullhorn"></i></div><div><strong style="display:block; margin-bottom:2px; font-size:13px;">Corporate Announcement</strong><span style="font-size:13px;">${AppState.settings.broadcast}</span></div></div>` : '';
         return `
         <div style="margin-bottom: 32px; animation: fadeUp 0.4s ease-out;"><div style="color:var(--text-muted); font-size:12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">${t('welcome')}</div><h1 style="margin:0; font-size:24px;">${AppState.currentUser.name}</h1></div>
         ${broadcastMsg} 
         <div class="grid-dash">
             <div>
-                <div class="card" style="background: linear-gradient(135deg, var(--primary), #1e3a8a); color: white; margin-bottom: 24px; border:none; box-shadow: 0 10px 25px -5px rgba(30, 58, 138, 0.4);">
-                    <div class="flex-between">
-                        <h2 style="color: #93c5fd; margin:0; font-weight: 500;"><i class="fas fa-wallet"></i> ${t('salary_title')}</h2>
-                        <button id="salary-btn" class="btn-toggle-view" onclick="App.toggleSal()"><i class="fas fa-eye"></i> ${t('show')}</button>
-                    </div>
-                    <div class="salary-container" style="margin-top:16px;">
-                        <span id="salary-val" class="salary-value masked">THB ${sal.net.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
-                    </div>
-                </div>
-                <div class="card" style="margin-bottom: 24px;">
-                    <h2 style="color: var(--primary); display:flex; align-items:center; gap:8px;"><i class="far fa-clock text-muted"></i> ${t('clock_title')}</h2>
-                    <select id="work-location" style="margin-bottom: 16px;"><option value="Office">${t('loc_office')}</option><option value="WFH">${t('loc_wfh')}</option></select>
-                    <div id="status-clock" style="margin-bottom: 20px; font-size: 13px; padding: 12px; background: var(--bg-main); border-radius: var(--radius-sm); border: 1px solid var(--border);"><span class="text-muted"><i class="fas fa-bed"></i> Currently Offline</span></div>
-                    <button id="btn-clock" class="btn-primary" onclick="App.clock()" style="padding: 14px; width:100%; font-size: 14px;"><i class="fas fa-sign-in-alt"></i> ${t('clock_btn_in')}</button>
-                </div>
+                <div class="card" style="background: linear-gradient(135deg, var(--primary), #1e3a8a); color: white; margin-bottom: 24px; border:none; box-shadow: 0 10px 25px -5px rgba(30, 58, 138, 0.4);"><div class="flex-between"><h2 style="color: #93c5fd; margin:0; font-weight: 500;"><i class="fas fa-wallet"></i> ${t('salary_title')}</h2><button id="salary-btn" class="btn-toggle-view" onclick="App.toggleSal()"><i class="fas fa-eye"></i> ${t('show')}</button></div><div class="salary-container" style="margin-top:16px;"><span id="salary-val" class="salary-value masked">THB ${sal.net.toLocaleString(undefined, {minimumFractionDigits: 2})}</span></div></div>
+                <div class="card" style="margin-bottom: 24px;"><h2 style="color: var(--primary); display:flex; align-items:center; gap:8px;"><i class="far fa-clock text-muted"></i> ${t('clock_title')}</h2><select id="work-location" style="margin-bottom: 16px;"><option value="Office">${t('loc_office')}</option><option value="WFH">${t('loc_wfh')}</option></select><div id="status-clock" style="margin-bottom: 20px; font-size: 13px; padding: 12px; background: var(--bg-main); border-radius: var(--radius-sm); border: 1px solid var(--border);"><span class="text-muted"><i class="fas fa-bed"></i> Currently Offline</span></div><button id="btn-clock" class="btn-primary" onclick="App.clock()" style="padding: 14px; width:100%; font-size: 14px;"><i class="fas fa-sign-in-alt"></i> ${t('clock_btn_in')}</button></div>
             </div>
-            <div class="card" style="display:flex; flex-direction:column; align-items:center; justify-content: center;">
-                <h2 style="margin-bottom: 24px; text-align:center;"><i class="fas fa-umbrella-beach text-muted"></i> ${t('leave_bal')}</h2>
-                <div style="position:relative; width:140px; height:140px; margin-bottom: 24px;">
-                    <canvas id="userChart"></canvas>
-                    <div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); text-align:center;">
-                        <div style="font-size:28px; font-weight:700; color:var(--primary); line-height:1;">${bal}</div>
-                        <div style="font-size:10px; color:var(--text-muted); font-weight: 600; margin-top: 4px; text-transform:uppercase;">Days</div>
-                    </div>
-                </div>
-                <button class="btn-outline" style="width: 100%; color: var(--accent); border-color: var(--accent);" onclick="App.openModal('modal-leave')"><i class="fas fa-plus"></i> ${t('req_lv')}</button>
-            </div>
+            <div class="card" style="display:flex; flex-direction:column; align-items:center; justify-content: center;"><h2 style="margin-bottom: 24px; text-align:center;"><i class="fas fa-umbrella-beach text-muted"></i> ${t('leave_bal')}</h2><div style="position:relative; width:140px; height:140px; margin-bottom: 24px;"><canvas id="userChart"></canvas><div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); text-align:center;"><div style="font-size:28px; font-weight:700; color:var(--primary); line-height:1;">${bal}</div><div style="font-size:10px; color:var(--text-muted); font-weight: 600; margin-top: 4px; text-transform:uppercase;">Days</div></div></div><button class="btn-outline" style="width: 100%; color: var(--accent); border-color: var(--accent);" onclick="App.openModal('modal-leave')"><i class="fas fa-plus"></i> ${t('req_lv')}</button></div>
         </div>`;
     },
+
     'time': () => {
         const u = AppState.currentUser.username, logs = AppState.timeLogs.filter(x=>x.u===u), reqs = AppState.requests.filter(x=>x.u===u);
         return `<div class="flex-between" style="margin-bottom: 24px; animation: fadeUp 0.4s ease-out;"><h1 style="margin:0;"><i class="fas fa-history text-muted"></i> ${t('time')}</h1><div style="display:flex; gap:12px;"><button class="btn-outline" onclick="App.openModal('modal-ot')"><i class="fas fa-moon"></i> ${t('req_ot')}</button><button class="btn-primary" onclick="App.openModal('modal-leave')"><i class="fas fa-umbrella-beach"></i> ${t('req_lv')}</button></div></div>
         <div class="card" style="padding-top:16px;"><div class="ui-tabs"><button class="tab-btn active" onclick="App.switchTab('t1', this)"><i class="fas fa-list-ul"></i> ${t('tab_log')}</button><button class="tab-btn" onclick="App.switchTab('t2', this)"><i class="fas fa-file-alt"></i> ${t('tab_lv')} / OT</button></div>
             <div id="t1" class="tab-content active table-wrapper"><table><thead><tr><th>Date</th><th>Location</th><th>In</th><th>Out</th><th>Hours</th></tr></thead><tbody>${logs.map(l=>`<tr><td><b style="color:var(--primary);">${l.d}</b></td><td><span class="badge" style="background:white; border: 1px solid var(--border); color:var(--text-muted);">${l.loc}</span></td><td>${l.in}</td><td>${l.out}</td><td><b style="color:var(--accent);">${l.hrs}</b></td></tr>`).join('') || `<tr><td colspan="5" class="empty-state"><i class="far fa-folder-open fa-2x" style="color:var(--border); margin-bottom:8px;"></i><br>${t('no_data')}</td></tr>`}</tbody></table></div>
-            <div id="t2" class="tab-content table-wrapper"><table><thead><tr><th>Type</th><th>Details</th><th>Status</th></tr></thead><tbody>${reqs.map(r=>`<tr><td><span class="badge" style="background:#f1f5f9; border:1px solid var(--border); color:var(--primary);">${r.type}</span></td><td><b style="color:var(--primary);">${r.detail}</b><br><span class="my-tooltip" style="font-size:12px;">${r.reason}<span class="tooltip-box">Details:<br>${r.reason}</span></span></td><td><span class="badge bg-${r.status.toLowerCase()}">${r.status}</span></td></tr>`).join('') || `<tr><td colspan="3" class="empty-state"><i class="far fa-folder-open fa-2x" style="color:var(--border); margin-bottom:8px;"></i><br>${t('no_data')}</td></tr>`}</tbody></table></div>
+            <div id="t2" class="tab-content table-wrapper"><table><thead><tr><th>Type</th><th>Details</th><th>Status</th></tr></thead><tbody>${reqs.map(r=>{
+                let badgeColor = 'var(--warning)'; let badgeBg = '#fffbeb';
+                if(r.status === 'Approved') { badgeColor = 'var(--success)'; badgeBg = '#ecfdf5'; }
+                else if(r.status === 'Rejected') { badgeColor = 'var(--danger)'; badgeBg = '#fef2f2'; }
+
+                const attachBtn = r.attachment ? `<br><a href="${r.attachment}" download="Document_${r.id}" target="_blank" style="display:inline-flex; align-items:center; gap:6px; font-size:11px; color:var(--accent); text-decoration:none; background:var(--accent-light); padding:4px 8px; border-radius:4px; margin-top:4px;"><i class="fas fa-paperclip"></i> View Evidence</a>` : '';
+                return `<tr><td><span class="badge" style="background:#f1f5f9; border:1px solid var(--border); color:var(--primary);">${r.type}</span></td><td><b style="color:var(--primary);">${r.detail}</b><br><span class="my-tooltip" style="font-size:12px;">${r.reason}<span class="tooltip-box">Details:<br>${r.reason}</span></span>${attachBtn}</td><td><span class="badge" style="background:${badgeBg}; color:${badgeColor}; border:1px solid ${badgeColor};">${r.status}</span></td></tr>`;
+            }).join('') || `<tr><td colspan="3" class="empty-state"><i class="far fa-folder-open fa-2x" style="color:var(--border); margin-bottom:8px;"></i><br>${t('no_data')}</td></tr>`}</tbody></table></div>
         </div>`;
     },
-    'payslip': () => `
-        <div class="flex-between no-print" style="margin-bottom: 24px; animation: fadeUp 0.4s ease-out;">
-            <h1 style="margin:0;"><i class="fas fa-file-invoice-dollar text-muted"></i> ${t('slip')}</h1>
-            <div style="display:flex; gap:12px;">
-                <select id="slip-month" onchange="App.genSlip()" style="margin:0; width:auto; font-weight:500;">
-                    ${App.getMonthOptions()}
-                </select>
-                <button class="btn-outline" onclick="window.print()"><i class="fas fa-print"></i> Print PDF</button>
-            </div>
-        </div>
-        <div id="printable-area"></div>
-    `,
+    
+    'payslip': () => `<div class="flex-between no-print" style="margin-bottom: 24px; animation: fadeUp 0.4s ease-out;"><h1 style="margin:0;"><i class="fas fa-file-invoice-dollar text-muted"></i> ${t('slip')}</h1><div style="display:flex; gap:12px;"><select id="slip-month" onchange="App.genSlip()" style="margin:0; width:auto; font-weight:500;">${App.getMonthOptions()}</select><button class="btn-outline" onclick="window.print()"><i class="fas fa-print"></i> Print PDF</button></div></div><div id="printable-area"></div>`,
+    
     'cal': () => `<div style="animation: fadeUp 0.4s ease-out;"><div class="calendar-nav"><h1 style="margin:0;"><i class="far fa-calendar-alt text-muted"></i> ${t('cal')} <span id="cal-title" style="color:var(--accent); font-weight:600; font-size:16px; margin-left:10px;"></span></h1><div style="display:flex; gap:8px;"><button class="cal-btn" onclick="App.changeCalMonth(-1)"><i class="fas fa-chevron-left"></i></button><button class="cal-btn" onclick="App.changeCalMonth(1)"><i class="fas fa-chevron-right"></i></button></div></div><div class="card"><div class="calendar-grid"><div class="cal-header">SUN</div><div class="cal-header">MON</div><div class="cal-header">TUE</div><div class="cal-header">WED</div><div class="cal-header">THU</div><div class="cal-header">FRI</div><div class="cal-header">SAT</div></div><div class="calendar-grid" id="cal-wrapper"></div></div></div>`,
+    
     'doc': () => {
         const docs = [{ name: 'Employee_Handbook_2026', title: 'Employee Handbook', size: '2.4 MB', date: 'Jan 10, 2026' },{ name: 'WFH_Policy', title: 'Remote Work Policy', size: '1.1 MB', date: 'Feb 15, 2026' },{ name: 'Insurance_Claims', title: 'Health Insurance Claims', size: '3.5 MB', date: 'Mar 01, 2026' }];
         return `<div style="animation: fadeUp 0.4s ease-out;"><h1 style="margin-bottom:24px;"><i class="far fa-folder-open text-muted"></i> ${t('doc')}</h1><div class="card"><h2 style="margin-bottom: 16px; font-size:14px; text-transform:uppercase; color:var(--text-muted);">Standard Operating Procedures (SOP)</h2>${docs.map(d => `<div class="policy-item"><div style="display:flex; align-items:center; gap:16px;"><div style="width:40px; height:40px; background:var(--bg-main); color:var(--accent); border: 1px solid var(--border); border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:18px;"><i class="far fa-file-pdf"></i></div><div><div style="font-weight:600; color:var(--primary); font-size:13px;">${d.title}</div><div style="font-size:11px; color:var(--text-muted); margin-top:2px;">Updated: ${d.date} • ${d.size}</div></div></div><button class="btn-outline" style="width:auto; font-size:12px; padding:6px 12px;" onclick="App.downloadFile('${d.name}')"><i class="fas fa-download"></i></button></div>`).join('')}</div></div>`;
     },
+
     'prof': () => {
-        const u = AppState.currentUser.username;
-        const p = AppState.profiles[u] || { email: '', phone: '', startDate: '' };
+        const u = AppState.currentUser.username, p = AppState.profiles[u] || { email: '', phone: '', startDate: '' };
         return `<div style="animation: fadeUp 0.4s ease-out;"><h1 style="margin-bottom:24px;"><i class="far fa-user-circle text-muted"></i> ${t('prof')}</h1><div class="grid-dash"><div class="card"><h2 style="margin-bottom: 24px; border-bottom: 1px solid var(--border); padding-bottom: 12px;">Personal Information</h2><div class="grid-2"><div><label>Full Name</label><input type="text" value="${AppState.currentUser.name}" disabled style="background:#f8fafc; color:#94a3b8;"></div><div><label>Employee ID</label><input type="text" value="EMP-${u.toUpperCase()}" disabled style="background:#f8fafc; color:#94a3b8;"></div><div><label>Department</label><input type="text" value="${AppState.currentUser.dept}" disabled style="background:#f8fafc; color:#94a3b8;"></div><div><label>Start Date</label><input type="text" value="${p.startDate}" disabled style="background:#f8fafc; color:#94a3b8;"></div><div><label>Email Address</label><input type="email" id="prof-email" value="${p.email}"></div><div><label>Contact Number</label><input type="text" id="prof-phone" value="${p.phone}"></div></div><div style="text-align:right; margin-top:16px;"><button class="btn-primary" style="width:auto; padding: 12px 24px;" onclick="App.saveProfile()"><i class="fas fa-save"></i> Save Changes</button></div></div><div class="card" style="text-align:center;"><img src="${p.avatar || `https://ui-avatars.com/api/?name=${AppState.currentUser.name}&background=e0e7ff&color=3b82f6&size=150`}" id="prof-avatar-img" style="border-radius:50%; border: 4px solid var(--bg-main); margin-bottom: 16px; width:120px; height:120px; object-fit:cover;"><h2 style="margin:0; font-size:16px;">${AppState.currentUser.name}</h2><p class="text-muted" style="margin-bottom:20px; font-size:12px;">${AppState.currentUser.dept}</p><input type="file" id="avatar-upload" style="display:none;" accept="image/*" onchange="App.handleAvatarUpload(event)"><button class="btn-outline" style="font-size:12px; padding:8px 16px;" onclick="document.getElementById('avatar-upload').click()"><i class="fas fa-camera"></i> Update Photo</button></div></div></div>`;
     },
 
-    // 🟢 หน้า Admin Dashboard แบบ 4 กล่อง (Grid-4)
     'admin-dash': () => {
         const todayStr = new Date().toLocaleDateString('en-CA');
         let activeCount = 0;
         for (const user in AppState.dailyClock) { if (AppState.dailyClock[user].date === todayStr && AppState.dailyClock[user].status === 'in') activeCount++; }
-        
-        const pendingApprovals = AppState.requests.filter(r=>r.status==='Pending').length;
+        const pendingApprovals = AppState.requests.filter(r=>r.status.includes('Pending')).length;
         const totalEmployees = AppState.users.filter(u=>u.isActive).length;
-        const onLeave = AppState.requests.filter(r=>r.status==='Approved' && r.type==='Leave').length; // จำลองคนลา
-
-        return `<div style="animation: fadeUp 0.4s ease-out;"><h1 style="margin-bottom:24px;"><i class="fas fa-chart-pie text-muted"></i> ${t('admin_dash')}</h1>
-        <div class="grid-4" style="margin-bottom: 24px;">
-            <div class="card" style="padding:20px; border-top: 3px solid var(--primary);">
-                <h2 style="font-size:12px; color:var(--text-muted); text-transform:uppercase; margin:0;"><i class="fas fa-users"></i> Employees</h2>
-                <div class="stat-value" style="font-size:28px;">${totalEmployees}</div>
-            </div>
-            <div class="card" style="padding:20px; border-top: 3px solid var(--success);">
-                <h2 style="font-size:12px; color:var(--text-muted); text-transform:uppercase; margin:0;"><i class="fas fa-building"></i> Present Today</h2>
-                <div class="stat-value" style="color:var(--success); font-size:28px;">${activeCount}</div>
-            </div>
-            <div class="card" style="padding:20px; border-top: 3px solid var(--warning);">
-                <h2 style="font-size:12px; color:var(--text-muted); text-transform:uppercase; margin:0;"><i class="fas fa-umbrella-beach"></i> On Leave</h2>
-                <div class="stat-value" style="color:var(--warning); font-size:28px;">${onLeave}</div>
-            </div>
-            <div class="card" style="padding:20px; border-top: 3px solid var(--danger);">
-                <h2 style="font-size:12px; color:var(--text-muted); text-transform:uppercase; margin:0;"><i class="fas fa-clipboard-check"></i> Pending Approvals</h2>
-                <div class="stat-value" style="color:var(--danger); font-size:28px;">${pendingApprovals}</div>
-            </div>
-        </div>
-        <div class="card"><h2 style="margin-bottom:16px; font-size:14px; text-transform:uppercase; color:var(--text-muted);">Weekly Attendance Overview</h2><div style="height: 280px; width: 100%; position: relative;"><canvas id="adminDashChart"></canvas></div></div></div>`;
+        const onLeave = AppState.requests.filter(r=>r.status==='Approved' && r.type==='Leave').length; 
+        return `<div style="animation: fadeUp 0.4s ease-out;"><h1 style="margin-bottom:24px;"><i class="fas fa-chart-pie text-muted"></i> ${t('admin_dash')}</h1><div class="grid-4" style="margin-bottom: 24px;"><div class="card" style="padding:20px; border-top: 3px solid var(--primary);"><h2 style="font-size:12px; color:var(--text-muted); text-transform:uppercase; margin:0;"><i class="fas fa-users"></i> Employees</h2><div class="stat-value" style="font-size:28px;">${totalEmployees}</div></div><div class="card" style="padding:20px; border-top: 3px solid var(--success);"><h2 style="font-size:12px; color:var(--text-muted); text-transform:uppercase; margin:0;"><i class="fas fa-building"></i> Present Today</h2><div class="stat-value" style="color:var(--success); font-size:28px;">${activeCount}</div></div><div class="card" style="padding:20px; border-top: 3px solid var(--warning);"><h2 style="font-size:12px; color:var(--text-muted); text-transform:uppercase; margin:0;"><i class="fas fa-umbrella-beach"></i> On Leave</h2><div class="stat-value" style="color:var(--warning); font-size:28px;">${onLeave}</div></div><div class="card" style="padding:20px; border-top: 3px solid var(--danger);"><h2 style="font-size:12px; color:var(--text-muted); text-transform:uppercase; margin:0;"><i class="fas fa-clipboard-check"></i> Pending Approvals</h2><div class="stat-value" style="color:var(--danger); font-size:28px;">${pendingApprovals}</div></div></div><div class="card"><h2 style="margin-bottom:16px; font-size:14px; text-transform:uppercase; color:var(--text-muted);">Weekly Attendance Overview</h2><div style="height: 280px; width: 100%; position: relative;"><canvas id="adminDashChart"></canvas></div></div></div>`;
     },
+    
+    // 🟢 หน้าอนุมัติ (แยกการมองเห็น: หัวหน้าเห็น Pending Supervisor, HR เห็น Pending HR)
     'admin-approve': () => {
-        const p = AppState.requests.filter(r=>r.status==='Pending');
-        return `<div style="animation: fadeUp 0.4s ease-out;"><h1 style="margin-bottom:24px;"><i class="fas fa-check-circle text-muted"></i> ${t('admin_appr')}</h1><div class="card table-wrapper" style="padding: 0;"><table style="margin:0;"><thead><tr><th>Employee</th><th>Request Info</th><th style="text-align:right;">Actions</th></tr></thead><tbody>${p.map(r=>`<tr><td><b style="font-size:14px; color:var(--primary);">${r.name}</b><br><span style="font-size:12px; color:var(--text-muted);">EMP-${r.u.toUpperCase()}</span></td><td><span class="badge" style="background:#f8fafc; border:1px solid var(--border); color:var(--text-dark); margin-bottom:4px;">${r.type}</span> <b style="font-size:13px; color:var(--primary);">${r.detail}</b><br><span class="my-tooltip" style="font-size:12px;">${r.reason}<span class="tooltip-box">Details:<br>${r.reason}</span></span></td><td style="text-align:right;"><button class="btn-primary" style="background:var(--success); width:auto; padding:6px 14px; margin-right:4px;" onclick="App.actionReq(${r.id}, 'Approved')"><i class="fas fa-check"></i> ${t('approve')}</button> <button class="btn-primary" style="background:var(--danger); width:auto; padding:6px 14px;" onclick="App.actionReq(${r.id}, 'Rejected')"><i class="fas fa-times"></i> ${t('reject')}</button></td></tr>`).join('') || `<tr><td colspan="3" class="empty-state"><i class="far fa-check-circle fa-2x" style="color:var(--success); margin-bottom:8px; opacity:0.5;"></i><br>No pending requests at this time.</td></tr>`}</tbody></table></div></div>`;
+        const role = AppState.currentUser.role;
+        const targetStat = role === 'head' ? 'Pending (Supervisor)' : 'Pending (HR)';
+        const p = AppState.requests.filter(r => r.status === targetStat || (role === 'head' && r.status === 'Pending')); 
+
+        return `<div style="animation: fadeUp 0.4s ease-out;">
+            <h1 style="margin-bottom:24px;"><i class="fas fa-check-circle text-muted"></i> ${t('admin_appr')}</h1>
+            <div class="card table-wrapper" style="padding: 0;">
+                <table style="margin:0;">
+                    <thead><tr><th>Employee</th><th>Request Info</th><th style="text-align:right;">Actions</th></tr></thead>
+                    <tbody>${p.map(r=>{
+                        let attachBtn = '';
+                        if (r.attachment && r.attachment.trim() !== '') {
+                            const isPdf = r.attachment.includes('application/pdf');
+                            attachBtn = `<div style="margin-top:12px; padding-top:8px; border-top:1px dashed var(--border);"><a href="${r.attachment}" download="Evidence_${r.id}${isPdf?'.pdf':'.png'}" target="_blank" style="display:inline-flex; align-items:center; gap:6px; font-size:12px; color:var(--accent); text-decoration:none; background:var(--accent-light); padding:6px 12px; border-radius:6px; border:1px solid #bfdbfe;"><i class="fas ${isPdf?'fa-file-pdf':'fa-image'}"></i> View / Download Evidence</a></div>`;
+                        }
+                        return `<tr><td><b style="font-size:14px; color:var(--primary);">${r.name}</b><br><span style="font-size:12px; color:var(--text-muted);">EMP-${r.u.toUpperCase()}</span></td><td><span class="badge" style="background:#f8fafc; border:1px solid var(--border); color:var(--text-dark); margin-bottom:6px;">${r.type}</span> <b style="font-size:13px; color:var(--primary);">${r.detail}</b><br><span style="font-size:13px; display:inline-block; margin-top:4px;"><b>Reason:</b> ${r.reason}</span>${attachBtn}</td><td style="text-align:right; vertical-align:top;"><button class="btn-primary" style="background:var(--success); width:auto; padding:8px 16px; margin-right:6px; margin-bottom:6px;" onclick="App.actionReq(${r.id}, 'Approved')"><i class="fas fa-check"></i> ${t('approve')}</button> <button class="btn-primary" style="background:var(--danger); width:auto; padding:8px 16px;" onclick="App.actionReq(${r.id}, 'Rejected')"><i class="fas fa-times"></i> ${t('reject')}</button></td></tr>`;
+                    }).join('') || `<tr><td colspan="3" class="empty-state"><i class="far fa-check-circle fa-2x" style="color:var(--success); margin-bottom:12px; opacity:0.5;"></i><br>No pending requests at this time.</td></tr>`}</tbody>
+                </table>
+            </div>
+        </div>`;
     },
+
     'admin-dir': () => {
         const currentUserRole = AppState.currentUser.role;
         return `
@@ -941,39 +942,22 @@ const Views = {
                     <thead><tr><th>ID</th><th>Name & Dept</th><th>Role</th><th>Status</th><th style="text-align:right;">Action</th></tr></thead>
                     <tbody>${AppState.users.map(u => {
                         const isActive = u.isActive !== false; 
-                        const statusBadge = isActive ? 
-                            `<span class="badge" style="background:#ecfdf5; color:#047857; border: 1px solid #a7f3d0;">${t('btn_active')}</span>` : 
-                            `<span class="badge" style="background:#fef2f2; color:#b91c1c; border: 1px solid #fecaca;">${t('btn_inactive')}</span>`;
-                        
+                        const statusBadge = isActive ? `<span class="badge" style="background:#ecfdf5; color:#047857; border: 1px solid #a7f3d0;">${t('btn_active')}</span>` : `<span class="badge" style="background:#fef2f2; color:#b91c1c; border: 1px solid #fecaca;">${t('btn_inactive')}</span>`;
                         const toggleBtnStr = isActive ? `<i class="fas fa-ban"></i> ${t('act_disable')}` : `<i class="fas fa-check"></i> ${t('act_enable')}`;
                         const toggleBtnColor = isActive ? `var(--danger)` : `var(--success)`;
-                        
-                        const resetBtn = (currentUserRole === 'admin' || currentUserRole === 'it') ? 
-                            `<button class="btn-outline" style="padding:6px 10px; margin-right:4px; font-size:13px;" onclick="App.resetPass('${u.username}')" title="Reset Password"><i class="fas fa-key text-muted" style="margin:0;"></i></button>` : '';
+                        const resetBtn = (currentUserRole === 'admin' || currentUserRole === 'it') ? `<button class="btn-outline" style="padding:6px 10px; margin-right:4px; font-size:13px;" onclick="App.resetPass('${u.username}')" title="Reset Password"><i class="fas fa-key text-muted" style="margin:0;"></i></button>` : '';
 
-                        return `<tr>
-                            <td style="font-size:12px; color:var(--text-muted);">EMP-${u.username.toUpperCase()}</td>
-                            <td><b style="color:var(--primary);">${u.name}</b><br><span style="font-size:12px; color:var(--text-muted);">${u.dept || '-'}</span></td>
-                            <td><span class="badge" style="background:#f8fafc; border:1px solid var(--border); color:var(--text-dark);">${u.role.toUpperCase()}</span></td>
-                            <td>${statusBadge}</td>
-                            <td style="text-align:right; white-space:nowrap;">
-                                ${resetBtn}
-                                <button class="btn-outline" style="padding:6px 12px; font-size:12px; width:auto; margin-right: 4px;" onclick="App.openEditUser('${u.username}')"><i class="fas fa-pen"></i> Edit</button>
-                                <button class="btn-primary" style="background:${toggleBtnColor}; padding:6px 12px; font-size:12px; width:auto;" onclick="App.toggleUserStatus('${u.username}')">${toggleBtnStr}</button>
-                            </td>
-                        </tr>`;
+                        return `<tr><td style="font-size:12px; color:var(--text-muted);">EMP-${u.username.toUpperCase()}</td><td><b style="color:var(--primary);">${u.name}</b><br><span style="font-size:12px; color:var(--text-muted);">${u.dept || '-'}</span></td><td><span class="badge" style="background:#f8fafc; border:1px solid var(--border); color:var(--text-dark);">${u.role.toUpperCase()}</span></td><td>${statusBadge}</td><td style="text-align:right; white-space:nowrap;">${resetBtn} <button class="btn-outline" style="padding:6px 12px; font-size:12px; width:auto; margin-right: 4px;" onclick="App.openEditUser('${u.username}')"><i class="fas fa-pen"></i> Edit</button> <button class="btn-primary" style="background:${toggleBtnColor}; padding:6px 12px; font-size:12px; width:auto;" onclick="App.toggleUserStatus('${u.username}')">${toggleBtnStr}</button></td></tr>`;
                     }).join('')}</tbody>
                 </table>
             </div>
-        </div>
-    `},
+        </div>`
+    },
     'admin-rep': () => `<div style="animation: fadeUp 0.4s ease-out;"><h1 style="margin-bottom:24px;"><i class="fas fa-chart-line text-muted"></i> ${t('admin_rep')}</h1><div class="grid-2"><div class="card"><h2 style="margin-bottom:16px; font-size:14px; text-transform:uppercase; color:var(--text-muted);">Leave Distribution</h2><div style="text-align:center; padding:40px; color:var(--text-dark); background:var(--bg-main); border-radius:var(--radius-sm); border:1px dashed var(--border);">Annual Leave: 65%<br><br>Sick Leave: 25%<br><br>Personal: 10%</div></div><div class="card"><h2 style="margin-bottom:16px; font-size:14px; text-transform:uppercase; color:var(--text-muted);">Overtime Costs</h2><div style="text-align:center; padding:40px; color:var(--text-muted); background:var(--bg-main); border-radius:var(--radius-sm); border:1px dashed var(--border);"><b style="font-size:28px; color:var(--primary);">THB 124,500.50</b><br><span style="font-size:12px;">Total OT payout this month</span></div></div></div></div>`,
     
-    // 🟢 หน้า Setting สำหรับ IT และ Admin (เปลี่ยนศัพท์เป็นทางการ)
     'admin-set': () => {
         const u = AppState.currentUser;
         let itSettingsSection = '';
-        
         if (u.role === 'it') {
             itSettingsSection = `
                 <hr style="margin:32px 0; border:0; border-top:1px solid var(--border);">
@@ -995,13 +979,67 @@ const Views = {
                             <button class="btn-primary" style="background:var(--danger); flex:1; font-size:12px; padding:10px;" onclick="App.clearCache()"><i class="fas fa-trash-alt"></i> Clear Cache</button>
                         </div>
                     </div>
-                </div>
-            `;
+                </div>`;
         }
-
         return `<div style="animation: fadeUp 0.4s ease-out;"><h1 style="margin-bottom:24px;"><i class="fas fa-cogs text-muted"></i> ${u.role === 'it' ? t('it_set') : t('admin_set')}</h1><div class="card" style="max-width:800px;"><h2 style="font-size:14px; text-transform:uppercase; color:var(--text-muted); margin-bottom:16px;">Global Configurations</h2><div class="grid-2"><div><label>Company Name</label><input type="text" id="set-company" value="${AppState.settings.companyName}"></div><div><label>Default Annual Leave Quota (Days)</label><input type="number" id="set-quota" value="${AppState.settings.leaveQuota}"></div></div><hr style="margin:24px 0; border:0; border-top:1px solid var(--border);"><h2 style="font-size:14px; text-transform:uppercase; color:var(--text-muted); margin-bottom:16px;">Broadcast Announcement</h2><p style="font-size:12px; color:var(--text-muted); margin-bottom:12px;">Message will be displayed on all user dashboards. Leave blank to disable.</p><textarea id="set-broadcast" rows="3" placeholder="Enter announcement text here...">${AppState.settings.broadcast || ''}</textarea>
         ${itSettingsSection}
         <div style="text-align:right; margin-top:24px; padding-top:20px; border-top:1px solid var(--border);"><button class="btn-primary" style="width:auto; padding: 12px 24px;" onclick="App.saveSettings()"><i class="fas fa-save"></i> Save Configuration</button></div></div></div>`;
+    }
+};
+
+// --- 🟢 Real-time Chat System ---
+const Chat = {
+    isOpen: false,
+    init: () => {
+        db.collection('hr_chats').orderBy('timestamp', 'asc').limit(50)
+        .onSnapshot(snapshot => {
+            const box = document.getElementById('chat-messages');
+            if(!box) return;
+            
+            let html = '';
+            snapshot.forEach(doc => {
+                const msg = doc.data();
+                const isSelf = msg.u === AppState.currentUser.username;
+                const time = msg.timestamp ? new Date(msg.timestamp.toDate()).toLocaleTimeString('en-US', {hour:'2-digit', minute:'2-digit'}) : 'Just now';
+                
+                html += `
+                    <div class="msg-bubble ${isSelf ? 'msg-self' : 'msg-other'}">
+                        ${!isSelf ? `<div class="msg-name">${msg.name} <span style="font-weight:400; opacity:0.6;">(${msg.role})</span></div>` : ''}
+                        <div>${msg.text}</div>
+                        <div class="msg-time">${time}</div>
+                    </div>
+                `;
+            });
+            box.innerHTML = html;
+            box.scrollTop = box.scrollHeight; 
+            
+            if(!Chat.isOpen && snapshot.docChanges().length > 0) {
+                const changes = snapshot.docChanges();
+                const hasNewFromOthers = changes.some(c => c.type === 'added' && c.doc.data().u !== AppState.currentUser.username);
+                if(hasNewFromOthers) document.getElementById('chat-unread').style.display = 'inline-block';
+            }
+        });
+    },
+    toggle: () => {
+        Chat.isOpen = !Chat.isOpen;
+        document.getElementById('chat-body').style.display = Chat.isOpen ? 'block' : 'none';
+        if(Chat.isOpen) {
+            document.getElementById('chat-unread').style.display = 'none';
+            const box = document.getElementById('chat-messages');
+            box.scrollTop = box.scrollHeight; 
+        }
+    },
+    send: () => {
+        const input = document.getElementById('chat-text');
+        const text = input.value.trim();
+        if(!text) return;
+        input.value = ''; 
+        
+        db.collection('hr_chats').add({
+            text: text, u: AppState.currentUser.username, name: AppState.currentUser.name,
+            role: AppState.currentUser.role.toUpperCase(),
+            timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        }).catch(err => console.error("Chat Error:", err));
     }
 };
 
@@ -1016,11 +1054,9 @@ document.addEventListener('click', function(event) {
     }
 });
 
-// --- 6. Initialization ---
 async function startApp() {
     await DB.load(); 
     applyLang(); 
-    
     const savedUser = localStorage.getItem('hr_logged_user');
     if(savedUser) {
         const u = JSON.parse(savedUser);
@@ -1032,7 +1068,6 @@ async function startApp() {
             document.getElementById('app-view').style.display = 'none';
             return;
         }
-        
         AppState.currentUser = u;
         App.boot();
     } else {
@@ -1040,5 +1075,4 @@ async function startApp() {
         document.getElementById('app-view').style.display = 'none';
     }
 }
-
 startApp();
