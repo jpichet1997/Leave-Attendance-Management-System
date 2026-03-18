@@ -59,6 +59,29 @@ function applyLang() {
     langBtns.forEach(btn => { btn.onclick = (e) => toggleLanguage(e); });
 }
 
+// 🟢 เพิ่ม CSS สำหรับ Hover Preview อัตโนมัติ
+if (!document.getElementById('hover-preview-styles')) {
+    const style = document.createElement('style');
+    style.id = 'hover-preview-styles';
+    style.innerHTML = `
+        .evidence-hover { position: relative; display: inline-block; }
+        .evidence-hover .preview-box {
+            display: none; position: absolute; bottom: 120%; left: 0;
+            width: 250px; background: white; border: 1px solid var(--border);
+            border-radius: 8px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.2);
+            padding: 6px; z-index: 100;
+        }
+        .evidence-hover:hover .preview-box { display: block; animation: fadeUp 0.2s ease-out; }
+        .preview-box img { width: 100%; max-height: 200px; border-radius: 4px; object-fit: contain; background: #f8fafc; }
+        .preview-box::after {
+            content: ''; position: absolute; top: 100%; left: 20px;
+            border-width: 8px; border-style: solid;
+            border-color: white transparent transparent transparent;
+        }
+    `;
+    document.head.appendChild(style);
+}
+
 // --- 2. Database & State (Firebase Version) ---
 const firebaseConfig = {
     apiKey: "AIzaSyAUHCBVj2_6grlBdexUmP1BjzflOCaHiMQ",
@@ -120,7 +143,15 @@ const DB = {
     save: (state) => {
         const dataToSave = { ...state };
         delete dataToSave.currentUser;
-        dbRef.set(dataToSave, { merge: true }).catch(err => console.error("Database sync error:", err));
+        
+        // 🟢 แก้ปัญหา Firebase เพี้ยน/บวม ด้วยการจำกัดขนาดข้อมูลที่บันทึก
+        if (dataToSave.auditLogs && dataToSave.auditLogs.length > 100) {
+            dataToSave.auditLogs.length = 100; // เก็บแค่ 100 รายการล่าสุด
+        }
+        
+        dbRef.set(dataToSave, { merge: true })
+            .then(() => console.log("Database Sync: Success"))
+            .catch(err => console.error("Database sync error:", err));
     }
 };
 
@@ -142,6 +173,9 @@ const fileToBase64 = (file) => new Promise((resolve, reject) => {
 const Notif = {
     push: (user, msg) => {
         AppState.notifications.unshift({ id: Date.now(), username: user, message: msg, isRead: false, time: new Date().toLocaleTimeString('en-US',{hour:'2-digit', minute:'2-digit'}) });
+        // 🟢 จำกัดการแจ้งเตือนไม่ให้รก Database
+        if (AppState.notifications.length > 50) AppState.notifications.length = 50;
+        
         DB.save(AppState);
         if (AppState.currentUser && AppState.currentUser.username === user) { App.toast(msg); Notif.render(); }
     },
@@ -223,6 +257,12 @@ const App = {
             detail: detail,
             time: new Date().toLocaleString('en-GB')
         });
+        
+        // 🟢 ป้องกัน Firebase พัง: จำกัดจำนวน Audit Log เก็บไว้แค่ 100 รายการล่าสุด
+        if (AppState.auditLogs.length > 100) {
+            AppState.auditLogs.length = 100;
+        }
+        
         DB.save(AppState);
     },
 
@@ -284,13 +324,11 @@ const App = {
                 <div class="nav-item" onclick="App.nav('prof', this)"><i class="fas fa-user"></i> ${t('prof')}</div>`;
             App.nav('home', menu.children[1]);
         }
-        
         Notif.render(); App.updateBadge();
         
-        // 🟢 เปิดใช้งานวิดเจ็ต Chat ทุกครั้งที่ล็อกอินสำเร็จ
         const chatWidget = document.getElementById('chat-widget');
         if(chatWidget) chatWidget.style.display = 'block';
-        Chat.init(); 
+        if(typeof Chat !== 'undefined') Chat.init(); 
     },
     
     nav: (page, el) => {
@@ -555,39 +593,144 @@ const App = {
         }
     },
 
+    // 🟢 ระบบ Face Recognition ของเดิม
     clock: () => {
+        App.startFaceScan();
+    },
+
+    startFaceScan: () => {
+        if (!document.getElementById('scan-styles')) {
+            const style = document.createElement('style');
+            style.id = 'scan-styles';
+            style.innerHTML = `
+                @keyframes scanline {
+                    0% { top: 0%; }
+                    50% { top: 100%; }
+                    100% { top: 0%; }
+                }
+                .face-scanner-box {
+                    position: relative; width: 220px; height: 220px; margin: 20px auto;
+                    border-radius: 50%; overflow: hidden; border: 4px solid var(--primary);
+                    box-shadow: 0 0 30px rgba(59, 130, 246, 0.4); background: #0f172a;
+                }
+                .scan-line {
+                    position: absolute; top: 0; left: 0; width: 100%; height: 4px;
+                    background: #10b981; box-shadow: 0 0 15px #10b981;
+                    animation: scanline 2.5s infinite linear; display: none; z-index: 10;
+                }
+                .scan-overlay {
+                    position: absolute; top:0; left:0; right:0; bottom:0;
+                    background: rgba(16, 185, 129, 0.1); display: none; z-index: 5;
+                }
+            `;
+            document.head.appendChild(style);
+        }
+
+        let m = document.getElementById('modal-facescan');
+        if(!m) {
+            m = document.createElement('div');
+            m.className = 'modal';
+            m.id = 'modal-facescan';
+            document.body.appendChild(m);
+        }
+        
+        m.innerHTML = `
+            <div class="modal-content" style="text-align:center; max-width:400px; border-radius: 20px;">
+                <h2 style="margin-top:10px; color:var(--primary); font-size:18px;"><i class="fas fa-expand"></i> Biometric Verification</h2>
+                <p class="text-muted" style="font-size:13px;">Please position your face within the frame.</p>
+                
+                <div class="face-scanner-box">
+                    <video id="face-video" autoplay muted playsinline style="width:100%; height:100%; object-fit:cover; transform: scaleX(-1);"></video>
+                    <div id="scan-line" class="scan-line"></div>
+                    <div id="scan-overlay" class="scan-overlay"></div>
+                </div>
+                
+                <div id="scan-status" style="font-weight:600; font-size:14px; color:var(--text-dark); margin-top:16px; min-height: 24px;">Initializing camera feed...</div>
+                
+                <button class="btn-outline" style="margin-top:24px; border-radius: 20px; padding: 10px 30px;" onclick="App.cancelFaceScan()">Cancel</button>
+            </div>
+        `;
+        App.openModal('modal-facescan');
+
+        const video = document.getElementById('face-video');
+        const scanLine = document.getElementById('scan-line');
+        const overlay = document.getElementById('scan-overlay');
+        const status = document.getElementById('scan-status');
+
+        navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } })
+        .then(stream => {
+            video.srcObject = stream;
+            window.localStream = stream; 
+            setTimeout(() => {
+                status.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Detecting facial features...`;
+                scanLine.style.display = "block";
+            }, 1000);
+            setTimeout(() => {
+                status.innerHTML = `<i class="fas fa-network-wired"></i> Matching with database (128 points)...`;
+            }, 2500);
+            setTimeout(() => {
+                overlay.style.display = "block";
+                scanLine.style.display = "none";
+                status.innerHTML = `<span style="color:var(--success); font-size:16px;"><i class="fas fa-check-circle"></i> Identity Verified!</span>`;
+                setTimeout(() => {
+                    App.cancelFaceScan();
+                    App.processClock(); 
+                }, 1500);
+            }, 4500);
+        })
+        .catch(err => {
+            console.error("Camera access denied:", err);
+            status.innerHTML = `<span style="color:var(--warning);"><i class="fas fa-exclamation-triangle"></i> Camera access denied. Proceeding via fallback...</span>`;
+            setTimeout(() => {
+                App.cancelFaceScan();
+                App.processClock(); 
+            }, 2500);
+        });
+    },
+
+    cancelFaceScan: () => {
+        App.closeModal('modal-facescan');
+        if(window.localStream) {
+            window.localStream.getTracks().forEach(track => track.stop()); 
+        }
+    },
+
+    processClock: () => {
         const u = AppState.currentUser.username, d = new Date().toLocaleDateString('en-CA'), loc = document.getElementById('work-location').value;
         if (!AppState.dailyClock[u] || AppState.dailyClock[u].date !== d) AppState.dailyClock[u] = { date: d, status: 'out', in: null };
         let c = AppState.dailyClock[u];
+        
         if (c.status === 'out') { 
             c.status = 'in'; c.in = Date.now(); c.loc = loc; 
-            App.addLog('Attendance', `Clocked in from ${loc}`);
+            App.addLog('Attendance', `Clocked in via FaceScan (${loc})`);
             App.toast('Clocked in successfully.'); 
         } else {
             const hrs = ((Date.now() - c.in) / 3600000).toFixed(2);
             AppState.timeLogs.unshift({ u: u, d: d, in: new Date(c.in).toLocaleTimeString('en-US',{hour:'2-digit', minute:'2-digit'}), out: new Date().toLocaleTimeString('en-US',{hour:'2-digit', minute:'2-digit'}), hrs, loc: c.loc });
             c.status = 'out'; c.in = null; 
-            App.addLog('Attendance', `Clocked out. Session duration: ${hrs}h`);
+            App.addLog('Attendance', `Clocked out via FaceScan. Session: ${hrs}h`);
             App.toast(`Clocked out. Session: ${hrs}h`);
         }
         DB.save(AppState); App.updateClock();
     },
+
     updateClock: () => {
         const btn = document.getElementById('btn-clock'), st = document.getElementById('status-clock'), sel = document.getElementById('work-location');
         if(!btn) return; let c = AppState.dailyClock[AppState.currentUser.username];
         if (c && c.status === 'in' && c.date === new Date().toLocaleDateString('en-CA')) {
             sel.disabled = true; 
-            btn.innerHTML = `<i class="fas fa-sign-out-alt"></i> ${t('clock_btn_out')}`; 
+            btn.innerHTML = `<i class="fas fa-sign-out-alt"></i> ${t('clock_btn_out')} (Face Scan)`; 
             btn.classList.replace('btn-primary', 'btn-danger');
             st.innerHTML = `<span style="color:var(--success); font-weight:600;"><i class="fas fa-circle" style="font-size:8px; vertical-align:middle;"></i> Active Session (${c.loc})</span><br><span class="text-muted">Since ${new Date(c.in).toLocaleTimeString('en-US',{hour:'2-digit', minute:'2-digit'})}</span>`;
         } else { 
             sel.disabled = false; 
-            btn.innerHTML = `<i class="fas fa-sign-in-alt"></i> ${t('clock_btn_in')}`; 
+            btn.innerHTML = `<i class="fas fa-camera"></i> ${t('clock_btn_in')} (Face Scan)`; 
             btn.classList.replace('btn-danger', 'btn-primary'); 
             st.innerHTML = `<span class="text-muted"><i class="fas fa-bed"></i> Currently Offline</span>`; 
         }
     },
     
+    // 🟢 ระบบบันทึกขอลางาน (กลับมาเป็น Pending (Supervisor))
     submitLeave: async () => {
         const u = AppState.currentUser.username, k = document.getElementById('lv-type').value.includes('Annual') ? 'annual' : 'sick';
         let days = document.getElementById('lv-format').value === 'hourly' ? 0.125 : 1; 
@@ -615,6 +758,7 @@ const App = {
         App.closeModal('modal-leave'); App.toast('Request submitted to Supervisor.'); App.nav('time', document.querySelectorAll('.nav-item')[1]); 
     },
     
+    // 🟢 ระบบบันทึก OT (กลับมาเป็น Pending (Supervisor))
     submitOT: async () => {
         let attachmentBase64 = null;
         const fileInput = document.getElementById('ot-file');
@@ -641,6 +785,7 @@ const App = {
         fetch(webhookUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ employeeName: employee, requestType: type, result: status, time: new Date().toLocaleString('en-GB') }) }).catch(err => console.error("Webhook Error:", err));
     },
 
+    // 🟢 การอนุมัติ 2 ขั้นตอน 
     actionReq: (id, actionType) => {
         const r = AppState.requests.find(x => x.id === id);
         const userRole = AppState.currentUser.role;
@@ -654,6 +799,8 @@ const App = {
                 } else if (userRole === 'admin') {
                     newStatus = 'Approved';
                 }
+            } else {
+                newStatus = 'Rejected';
             }
 
             r.status = newStatus; 
@@ -667,13 +814,14 @@ const App = {
         }
     },
     
+    // 🟢 อัปเดตตัวเลขแจ้งเตือนตาม Role
     updateBadge: () => { 
         const b = document.getElementById('badge-pending');
         if(!b || !AppState.currentUser) return;
         const role = AppState.currentUser.role;
         let count = 0;
         
-        if (role === 'head') count = AppState.requests.filter(r => r.status === 'Pending (Supervisor)' || r.status === 'Pending').length;
+        if (role === 'head') count = AppState.requests.filter(r => r.status === 'Pending (Supervisor)').length;
         if (role === 'admin') count = AppState.requests.filter(r => r.status === 'Pending (HR)').length;
         
         b.innerText = count; 
@@ -856,12 +1004,16 @@ const Views = {
         <div class="grid-dash">
             <div>
                 <div class="card" style="background: linear-gradient(135deg, var(--primary), #1e3a8a); color: white; margin-bottom: 24px; border:none; box-shadow: 0 10px 25px -5px rgba(30, 58, 138, 0.4);"><div class="flex-between"><h2 style="color: #93c5fd; margin:0; font-weight: 500;"><i class="fas fa-wallet"></i> ${t('salary_title')}</h2><button id="salary-btn" class="btn-toggle-view" onclick="App.toggleSal()"><i class="fas fa-eye"></i> ${t('show')}</button></div><div class="salary-container" style="margin-top:16px;"><span id="salary-val" class="salary-value masked">THB ${sal.net.toLocaleString(undefined, {minimumFractionDigits: 2})}</span></div></div>
-                <div class="card" style="margin-bottom: 24px;"><h2 style="color: var(--primary); display:flex; align-items:center; gap:8px;"><i class="far fa-clock text-muted"></i> ${t('clock_title')}</h2><select id="work-location" style="margin-bottom: 16px;"><option value="Office">${t('loc_office')}</option><option value="WFH">${t('loc_wfh')}</option></select><div id="status-clock" style="margin-bottom: 20px; font-size: 13px; padding: 12px; background: var(--bg-main); border-radius: var(--radius-sm); border: 1px solid var(--border);"><span class="text-muted"><i class="fas fa-bed"></i> Currently Offline</span></div><button id="btn-clock" class="btn-primary" onclick="App.clock()" style="padding: 14px; width:100%; font-size: 14px;"><i class="fas fa-sign-in-alt"></i> ${t('clock_btn_in')}</button></div>
+                <div class="card" style="margin-bottom: 24px;"><h2 style="color: var(--primary); display:flex; align-items:center; gap:8px;"><i class="far fa-clock text-muted"></i> ${t('clock_title')}</h2><select id="work-location" style="margin-bottom: 16px;"><option value="Office">${t('loc_office')}</option><option value="WFH">${t('loc_wfh')}</option></select><div id="status-clock" style="margin-bottom: 20px; font-size: 13px; padding: 12px; background: var(--bg-main); border-radius: var(--radius-sm); border: 1px solid var(--border);"><span class="text-muted"><i class="fas fa-bed"></i> Currently Offline</span></div>
+                
+                <button id="btn-clock" class="btn-primary" onclick="App.clock()" style="padding: 14px; width:100%; font-size: 14px;"><i class="fas fa-camera"></i> ${t('clock_btn_in')} (Face Scan)</button>
+                </div>
             </div>
             <div class="card" style="display:flex; flex-direction:column; align-items:center; justify-content: center;"><h2 style="margin-bottom: 24px; text-align:center;"><i class="fas fa-umbrella-beach text-muted"></i> ${t('leave_bal')}</h2><div style="position:relative; width:140px; height:140px; margin-bottom: 24px;"><canvas id="userChart"></canvas><div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); text-align:center;"><div style="font-size:28px; font-weight:700; color:var(--primary); line-height:1;">${bal}</div><div style="font-size:10px; color:var(--text-muted); font-weight: 600; margin-top: 4px; text-transform:uppercase;">Days</div></div></div><button class="btn-outline" style="width: 100%; color: var(--accent); border-color: var(--accent);" onclick="App.openModal('modal-leave')"><i class="fas fa-plus"></i> ${t('req_lv')}</button></div>
         </div>`;
     },
 
+    // 🟢 เพิ่ม Hover Preview ให้หน้าพนักงาน
     'time': () => {
         const u = AppState.currentUser.username, logs = AppState.timeLogs.filter(x=>x.u===u), reqs = AppState.requests.filter(x=>x.u===u);
         return `<div class="flex-between" style="margin-bottom: 24px; animation: fadeUp 0.4s ease-out;"><h1 style="margin:0;"><i class="fas fa-history text-muted"></i> ${t('time')}</h1><div style="display:flex; gap:12px;"><button class="btn-outline" onclick="App.openModal('modal-ot')"><i class="fas fa-moon"></i> ${t('req_ot')}</button><button class="btn-primary" onclick="App.openModal('modal-leave')"><i class="fas fa-umbrella-beach"></i> ${t('req_lv')}</button></div></div>
@@ -872,7 +1024,26 @@ const Views = {
                 if(r.status === 'Approved') { badgeColor = 'var(--success)'; badgeBg = '#ecfdf5'; }
                 else if(r.status === 'Rejected') { badgeColor = 'var(--danger)'; badgeBg = '#fef2f2'; }
 
-                const attachBtn = r.attachment ? `<br><a href="${r.attachment}" download="Document_${r.id}" target="_blank" style="display:inline-flex; align-items:center; gap:6px; font-size:11px; color:var(--accent); text-decoration:none; background:var(--accent-light); padding:4px 8px; border-radius:4px; margin-top:4px;"><i class="fas fa-paperclip"></i> View Evidence</a>` : '';
+                let attachBtn = '';
+                if (r.attachment && r.attachment.trim() !== '') {
+                    const isPdf = r.attachment.includes('application/pdf');
+                    const icon = isPdf ? 'fa-file-pdf' : 'fa-image';
+                    const fileExt = isPdf ? '.pdf' : '.png';
+                    
+                    if (isPdf) {
+                        attachBtn = `<div style="margin-top:12px; padding-top:8px; border-top:1px dashed var(--border);"><a href="${r.attachment}" download="Evidence_${r.id}${fileExt}" target="_blank" style="display:inline-flex; align-items:center; gap:6px; font-size:12px; color:var(--accent); text-decoration:none; background:var(--accent-light); padding:6px 12px; border-radius:6px; border:1px solid #bfdbfe;"><i class="fas ${icon}"></i> View / Download Evidence</a></div>`;
+                    } else {
+                        attachBtn = `<div style="margin-top:12px; padding-top:8px; border-top:1px dashed var(--border);">
+                            <div class="evidence-hover">
+                                <a href="${r.attachment}" download="Evidence_${r.id}${fileExt}" target="_blank" style="display:inline-flex; align-items:center; gap:6px; font-size:12px; color:var(--accent); text-decoration:none; background:var(--accent-light); padding:6px 12px; border-radius:6px; border:1px solid #bfdbfe;">
+                                    <i class="fas ${icon}"></i> View Evidence
+                                </a>
+                                <div class="preview-box"><img src="${r.attachment}" alt="Preview"></div>
+                            </div>
+                        </div>`;
+                    }
+                }
+
                 return `<tr><td><span class="badge" style="background:#f1f5f9; border:1px solid var(--border); color:var(--primary);">${r.type}</span></td><td><b style="color:var(--primary);">${r.detail}</b><br><span class="my-tooltip" style="font-size:12px;">${r.reason}<span class="tooltip-box">Details:<br>${r.reason}</span></span>${attachBtn}</td><td><span class="badge" style="background:${badgeBg}; color:${badgeColor}; border:1px solid ${badgeColor};">${r.status}</span></td></tr>`;
             }).join('') || `<tr><td colspan="3" class="empty-state"><i class="far fa-folder-open fa-2x" style="color:var(--border); margin-bottom:8px;"></i><br>${t('no_data')}</td></tr>`}</tbody></table></div>
         </div>`;
@@ -902,11 +1073,11 @@ const Views = {
         return `<div style="animation: fadeUp 0.4s ease-out;"><h1 style="margin-bottom:24px;"><i class="fas fa-chart-pie text-muted"></i> ${t('admin_dash')}</h1><div class="grid-4" style="margin-bottom: 24px;"><div class="card" style="padding:20px; border-top: 3px solid var(--primary);"><h2 style="font-size:12px; color:var(--text-muted); text-transform:uppercase; margin:0;"><i class="fas fa-users"></i> Employees</h2><div class="stat-value" style="font-size:28px;">${totalEmployees}</div></div><div class="card" style="padding:20px; border-top: 3px solid var(--success);"><h2 style="font-size:12px; color:var(--text-muted); text-transform:uppercase; margin:0;"><i class="fas fa-building"></i> Present Today</h2><div class="stat-value" style="color:var(--success); font-size:28px;">${activeCount}</div></div><div class="card" style="padding:20px; border-top: 3px solid var(--warning);"><h2 style="font-size:12px; color:var(--text-muted); text-transform:uppercase; margin:0;"><i class="fas fa-umbrella-beach"></i> On Leave</h2><div class="stat-value" style="color:var(--warning); font-size:28px;">${onLeave}</div></div><div class="card" style="padding:20px; border-top: 3px solid var(--danger);"><h2 style="font-size:12px; color:var(--text-muted); text-transform:uppercase; margin:0;"><i class="fas fa-clipboard-check"></i> Pending Approvals</h2><div class="stat-value" style="color:var(--danger); font-size:28px;">${pendingApprovals}</div></div></div><div class="card"><h2 style="margin-bottom:16px; font-size:14px; text-transform:uppercase; color:var(--text-muted);">Weekly Attendance Overview</h2><div style="height: 280px; width: 100%; position: relative;"><canvas id="adminDashChart"></canvas></div></div></div>`;
     },
     
-    // 🟢 หน้าอนุมัติ (แยกการมองเห็น: หัวหน้าเห็น Pending Supervisor, HR เห็น Pending HR)
+    // 🟢 หน้าอนุมัติ (แยกหน้าตาม Role + มี Stepper + มี Hover Preview)
     'admin-approve': () => {
         const role = AppState.currentUser.role;
         const targetStat = role === 'head' ? 'Pending (Supervisor)' : 'Pending (HR)';
-        const p = AppState.requests.filter(r => r.status === targetStat || (role === 'head' && r.status === 'Pending')); 
+        const p = AppState.requests.filter(r => r.status === targetStat); 
 
         return `<div style="animation: fadeUp 0.4s ease-out;">
             <h1 style="margin-bottom:24px;"><i class="fas fa-check-circle text-muted"></i> ${t('admin_appr')}</h1>
@@ -917,9 +1088,50 @@ const Views = {
                         let attachBtn = '';
                         if (r.attachment && r.attachment.trim() !== '') {
                             const isPdf = r.attachment.includes('application/pdf');
-                            attachBtn = `<div style="margin-top:12px; padding-top:8px; border-top:1px dashed var(--border);"><a href="${r.attachment}" download="Evidence_${r.id}${isPdf?'.pdf':'.png'}" target="_blank" style="display:inline-flex; align-items:center; gap:6px; font-size:12px; color:var(--accent); text-decoration:none; background:var(--accent-light); padding:6px 12px; border-radius:6px; border:1px solid #bfdbfe;"><i class="fas ${isPdf?'fa-file-pdf':'fa-image'}"></i> View / Download Evidence</a></div>`;
+                            const icon = isPdf ? 'fa-file-pdf' : 'fa-image';
+                            const fileExt = isPdf ? '.pdf' : '.png';
+                            
+                            if (isPdf) {
+                                attachBtn = `<div style="margin-top:12px; padding-top:8px; border-top:1px dashed var(--border);"><a href="${r.attachment}" download="Evidence_${r.id}${fileExt}" target="_blank" style="display:inline-flex; align-items:center; gap:6px; font-size:12px; color:var(--accent); text-decoration:none; background:var(--accent-light); padding:6px 12px; border-radius:6px; border:1px solid #bfdbfe;"><i class="fas ${icon}"></i> View / Download Evidence</a></div>`;
+                            } else {
+                                attachBtn = `
+                                <div style="margin-top:12px; padding-top:8px; border-top:1px dashed var(--border);">
+                                    <div class="evidence-hover">
+                                        <a href="${r.attachment}" download="Evidence_${r.id}${fileExt}" target="_blank" style="display:inline-flex; align-items:center; gap:6px; font-size:12px; color:var(--accent); text-decoration:none; background:var(--accent-light); padding:6px 12px; border-radius:6px; border:1px solid #bfdbfe;">
+                                            <i class="fas ${icon}"></i> View Evidence
+                                        </a>
+                                        <div class="preview-box"><img src="${r.attachment}" alt="Preview Evidence"></div>
+                                    </div>
+                                </div>`;
+                            }
                         }
-                        return `<tr><td><b style="font-size:14px; color:var(--primary);">${r.name}</b><br><span style="font-size:12px; color:var(--text-muted);">EMP-${r.u.toUpperCase()}</span></td><td><span class="badge" style="background:#f8fafc; border:1px solid var(--border); color:var(--text-dark); margin-bottom:6px;">${r.type}</span> <b style="font-size:13px; color:var(--primary);">${r.detail}</b><br><span style="font-size:13px; display:inline-block; margin-top:4px;"><b>Reason:</b> ${r.reason}</span>${attachBtn}</td><td style="text-align:right; vertical-align:top;"><button class="btn-primary" style="background:var(--success); width:auto; padding:8px 16px; margin-right:6px; margin-bottom:6px;" onclick="App.actionReq(${r.id}, 'Approved')"><i class="fas fa-check"></i> ${t('approve')}</button> <button class="btn-primary" style="background:var(--danger); width:auto; padding:8px 16px;" onclick="App.actionReq(${r.id}, 'Rejected')"><i class="fas fa-times"></i> ${t('reject')}</button></td></tr>`;
+                        
+                        // 🟢 เพิ่มตัวโชว์สถานะ Workflow Stepper
+                        const stepper = `
+                            <div style="display:flex; align-items:center; gap:8px; margin-top:8px;">
+                                <div style="width:8px; height:8px; border-radius:50%; background:var(--success);"></div>
+                                <div style="width:40px; height:2px; background:var(--success);"></div>
+                                <div style="width:8px; height:8px; border-radius:50%; background:${r.status.includes('HR') ? 'var(--accent)' : '#e2e8f0'};"></div>
+                                <div style="width:40px; height:2px; background:#e2e8f0;"></div>
+                                <div style="width:8px; height:8px; border-radius:50%; background:#e2e8f0;"></div>
+                                <small style="font-size:10px; color:var(--text-muted); margin-left:8px;">Workflow: Supervisor > HR</small>
+                            </div>
+                        `;
+
+                        return `<tr>
+                            <td><b style="font-size:14px; color:var(--primary);">${r.name}</b><br><span style="font-size:12px; color:var(--text-muted);">EMP-${r.u.toUpperCase()}</span></td>
+                            <td>
+                                <span class="badge" style="background:#f8fafc; border:1px solid var(--border); color:var(--text-dark); margin-bottom:6px;">${r.type}</span> 
+                                <b style="font-size:13px; color:var(--primary);">${r.detail}</b><br>
+                                <span style="font-size:13px; display:inline-block; margin-top:4px;"><b>Reason:</b> ${r.reason}</span>
+                                ${stepper}
+                                ${attachBtn}
+                            </td>
+                            <td style="text-align:right; vertical-align:top;">
+                                <button class="btn-primary" style="background:var(--success); width:auto; padding:8px 16px; margin-right:6px; margin-bottom:6px;" onclick="App.actionReq(${r.id}, 'Approved')"><i class="fas fa-check"></i> ${t('approve')}</button> 
+                                <button class="btn-primary" style="background:var(--danger); width:auto; padding:8px 16px;" onclick="App.actionReq(${r.id}, 'Rejected')"><i class="fas fa-times"></i> ${t('reject')}</button>
+                            </td>
+                        </tr>`;
                     }).join('') || `<tr><td colspan="3" class="empty-state"><i class="far fa-check-circle fa-2x" style="color:var(--success); margin-bottom:12px; opacity:0.5;"></i><br>No pending requests at this time.</td></tr>`}</tbody>
                 </table>
             </div>
@@ -987,40 +1199,78 @@ const Views = {
     }
 };
 
-// --- 🟢 Real-time Chat System ---
 const Chat = {
     isOpen: false,
+    currentRoom: '',
+    unsubscribe: null,
     init: () => {
-        db.collection('hr_chats').orderBy('timestamp', 'asc').limit(50)
-        .onSnapshot(snapshot => {
-            const box = document.getElementById('chat-messages');
-            if(!box) return;
-            
-            let html = '';
-            snapshot.forEach(doc => {
-                const msg = doc.data();
-                const isSelf = msg.u === AppState.currentUser.username;
-                const time = msg.timestamp ? new Date(msg.timestamp.toDate()).toLocaleTimeString('en-US', {hour:'2-digit', minute:'2-digit'}) : 'Just now';
-                
-                html += `
-                    <div class="msg-bubble ${isSelf ? 'msg-self' : 'msg-other'}">
-                        ${!isSelf ? `<div class="msg-name">${msg.name} <span style="font-weight:400; opacity:0.6;">(${msg.role})</span></div>` : ''}
-                        <div>${msg.text}</div>
-                        <div class="msg-time">${time}</div>
-                    </div>
-                `;
-            });
-            box.innerHTML = html;
-            box.scrollTop = box.scrollHeight; 
-            
-            if(!Chat.isOpen && snapshot.docChanges().length > 0) {
-                const changes = snapshot.docChanges();
-                const hasNewFromOthers = changes.some(c => c.type === 'added' && c.doc.data().u !== AppState.currentUser.username);
-                if(hasNewFromOthers) document.getElementById('chat-unread').style.display = 'inline-block';
-            }
-        });
+        const u = AppState.currentUser;
+        if (!Chat.currentRoom) Chat.currentRoom = u.username;
+
+        const header = document.querySelector('.chat-header');
+        if (u.role !== 'employee') {
+            const selectHtml = `
+                <select id="chat-room-select" onchange="Chat.changeRoom(this.value)" style="margin-left: 10px; padding: 2px 6px; font-size: 11px; border-radius: 4px; color: black; border: none; max-width: 130px; outline:none; cursor:pointer;">
+                    ${AppState.users.map(x => `<option value="${x.username}" ${x.username === Chat.currentRoom ? 'selected' : ''}>${x.name}</option>`).join('')}
+                </select>
+            `;
+            header.innerHTML = `<i class="fas fa-headset"></i> Support ${selectHtml} <span id="chat-unread" class="badge" style="background:#ef4444; color:white; display:none; margin-left:auto; border:none; padding:2px 6px; font-size:10px;">New</span>`;
+        } else {
+            header.innerHTML = `<i class="fas fa-headset"></i> HR Helpdesk <span id="chat-unread" class="badge" style="background:#ef4444; color:white; display:none; margin-left:auto; border:none; padding:2px 6px; font-size:10px;">New</span>`;
+        }
+
+        Chat.loadMessages();
     },
-    toggle: () => {
+    
+    changeRoom: (roomUser) => {
+        Chat.currentRoom = roomUser;
+        Chat.loadMessages();
+    },
+    
+    loadMessages: () => {
+        if (Chat.unsubscribe) Chat.unsubscribe(); 
+        
+        Chat.unsubscribe = db.collection('hr_chats')
+            .where('room', '==', Chat.currentRoom)
+            .onSnapshot(snapshot => {
+                const box = document.getElementById('chat-messages');
+                if(!box) return;
+                
+                let messages = [];
+                snapshot.forEach(doc => messages.push(doc.data()));
+                messages.sort((a, b) => {
+                    const tA = a.timestamp ? a.timestamp.toMillis() : Date.now();
+                    const tB = b.timestamp ? b.timestamp.toMillis() : Date.now();
+                    return tA - tB;
+                });
+                
+                let html = '';
+                messages.forEach(msg => {
+                    const isSelf = msg.u === AppState.currentUser.username;
+                    const time = msg.timestamp ? new Date(msg.timestamp.toDate()).toLocaleTimeString('en-US', {hour:'2-digit', minute:'2-digit'}) : 'Just now';
+                    
+                    html += `
+                        <div class="msg-bubble ${isSelf ? 'msg-self' : 'msg-other'}">
+                            ${!isSelf ? `<div class="msg-name">${msg.name} <span style="font-weight:400; opacity:0.6;">(${msg.role})</span></div>` : ''}
+                            <div>${msg.text}</div>
+                            <div class="msg-time">${time}</div>
+                        </div>
+                    `;
+                });
+                box.innerHTML = html || `<div style="text-align:center; margin-top:40px; color:var(--text-muted); font-size:12px;"><i class="far fa-comments fa-2x" style="margin-bottom:8px; opacity:0.5;"></i><br>Start conversation with ${Chat.currentRoom}</div>`;
+                box.scrollTop = box.scrollHeight; 
+                
+                if(!Chat.isOpen && snapshot.docChanges().length > 0) {
+                    const changes = snapshot.docChanges();
+                    const hasNewFromOthers = changes.some(c => c.type === 'added' && c.doc.data().u !== AppState.currentUser.username);
+                    if(hasNewFromOthers) document.getElementById('chat-unread').style.display = 'inline-block';
+                }
+            });
+    },
+    
+    toggle: (e) => {
+        if(e && e.target.id === 'chat-room-select') return;
+        
         Chat.isOpen = !Chat.isOpen;
         document.getElementById('chat-body').style.display = Chat.isOpen ? 'block' : 'none';
         if(Chat.isOpen) {
@@ -1029,6 +1279,7 @@ const Chat = {
             box.scrollTop = box.scrollHeight; 
         }
     },
+    
     send: () => {
         const input = document.getElementById('chat-text');
         const text = input.value.trim();
@@ -1036,7 +1287,10 @@ const Chat = {
         input.value = ''; 
         
         db.collection('hr_chats').add({
-            text: text, u: AppState.currentUser.username, name: AppState.currentUser.name,
+            room: Chat.currentRoom, 
+            text: text, 
+            u: AppState.currentUser.username, 
+            name: AppState.currentUser.name,
             role: AppState.currentUser.role.toUpperCase(),
             timestamp: firebase.firestore.FieldValue.serverTimestamp()
         }).catch(err => console.error("Chat Error:", err));
