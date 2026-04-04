@@ -218,66 +218,7 @@ let calMonth = new Date().getMonth(); let calYear = new Date().getFullYear();
 const fileToBase64 = (file) => new Promise((resolve, reject) => {
     const reader = new FileReader(); reader.readAsDataURL(file);
     reader.onload = () => resolve(reader.result); reader.onerror = error => reject(error);
-});
-// ==========================================
-// 🤖 CORE AI ENGINE: FACE BIOMETRICS (OFICIAL)
-// ==========================================
-// ตัวแปรเก็บ State ของ AI
-let isAIInitialized = false;
-let aiDetectionInterval = null;
-let currentStream = null;
-let verificationTimer = null; // ตัวจับเวลาเสถียรของใบหน้า
-
-// 🧠 ฟังก์ชัน: ปลุกสมอง AI (โหลดโมเดล) - ทำครั้งเดียวตอนรันแอป
-const initializeAI = async () => {
-    try {
-        console.log("🤖 [AI INIT] Initializing Face API Module...");
-        // ชี้เป้าไปที่โฟลเดอร์ /models ที่ลูกพี่สร้าง
-        const MODEL_URL = './models'; 
-        
-        // โหลดสมอง 3 ตัว: ตรวจจับหน้า, ตรวจจับจุดบนหน้า, แยกแยะโครงสร้าง
-        await Promise.all([
-            faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
-            faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
-            faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
-        ]);
-        
-        isAIInitialized = true;
-        console.log("🤖 [AI INIT] Models loaded successfully. Ready for biometrics.");
-    } catch (error) {
-        console.error("🤖 [AI INIT ERROR] Failed to load models:", error);
-        App.toast('AI Biometrics failed to initialize. Falling back to manual mode.', 'error');
-    }
-};
-
-// ==========================================
-// แก้ไข: ฟังก์ชัน Boot ระบบของเก่า (เพื่อให้โหลด AI ตอนเปิดเว็บ)
-// ==========================================
-// หา App.boot ของเก่า ลบทิ้ง แล้วเอาอันนี้วางทับแทน
-App.boot = async () => {
-    document.getElementById('auth-view').style.display = 'none';
-    document.getElementById('app-view').style.display = 'flex';
-    
-    // 🤖 ปลุก AI ตอนเปิดแอป
-    if(!isAIInitialized) await initializeAI(); 
-    
-    const u = AppState.currentUser;
-    document.getElementById('user-name').innerText = u.name;
-    document.getElementById('user-dept').innerText = u.dept;
-    
-    if(typeof App.updateAvatarImg === 'function') App.updateAvatarImg();
-    TimeEngine.startClock();
-    
-    const menu = document.getElementById('nav-menu');
-    // ... โค้ดสร้างเมนูของเดิม (ลูกพี่ปล่อยไว้เหมือนเดิมได้เลย) ...
-    
-    Notif.render(); 
-    if(typeof App.updateBadge === 'function') App.updateBadge();
-    
-    if (page === 'home') App.nav('home'); // สตาร์ทหน้าแรก
-};
-/**
-
+});/**
  * ==========================================================================
  * 🚀 ENTERPRISE HR OS v4.0 - FULL SCALE EDITION (PART 2/4)
  * Modules: Notifications, Authentication, and Application Core Controller
