@@ -2,153 +2,189 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Enterprise HR Management System</title>
+    
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
     <link rel="stylesheet" href="style.css">
-    <link rel="manifest" href="./manifest.json">
-  <meta name="theme-color" content="#0f172a">
-  <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3135/3135715.png">
 </head>
 <body>
 
     <div id="auth-view">
         <div class="auth-card">
-            <div style="text-align: center; margin-bottom: 32px;">
-                <h1 style="margin: 0; font-size: 24px; color: var(--primary);">Leave & Attendance</h1>
-                <p class="text-muted" style="font-size: 13px; font-weight: 500; margin-top: 4px;">S&J International Co., Ltd.</p>
-                <div style="margin-top: 12px; display: inline-block; padding: 4px 12px; background: var(--bg-main); border: 1px solid var(--border); border-radius: 20px; font-size: 11px; color: var(--text-muted); letter-spacing: 0.5px;">
-                    Enterprise System v1.3.0
+            
+            <div class="brand-header" style="margin-bottom: 32px;">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="url(#brand-gradient)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 16px;">
+                    <defs>
+                        <linearGradient id="brand-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stop-color="#4f46e5" />
+                            <stop offset="100%" stop-color="#06b6d4" />
+                        </linearGradient>
+                    </defs>
+                    <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+                    <path d="M2 17l10 5 10-5"></path>
+                    <path d="M2 12l10 5 10-5"></path>
+                </svg>
+                <h1>Leave & Attendance</h1>
+                <p class="text-muted">S&J International Co., Ltd.</p>
+                <div class="badge" style="background: rgba(79, 70, 229, 0.1); color: #4f46e5; margin-top: 12px; font-weight: 700; letter-spacing: 0.5px;">
+                    ENTERPRISE OS v2.0
                 </div>
             </div>
             
             <div id="form-login">
                 <form onsubmit="event.preventDefault(); Auth.login();">
                     <label class="th-en" data-th="รหัสพนักงาน / Username" data-en="Employee ID / Username">รหัสพนักงาน / Username</label>
-                   <input type="text" id="login-user" placeholder="Enter your ID" required>
+                    <input type="text" id="login-user" placeholder="Enter your ID" autocomplete="username" required>
+                    
                     <label class="th-en" data-th="รหัสผ่าน (Password)" data-en="Password">รหัสผ่าน (Password)</label>
-                    <input type="password" id="login-pass" placeholder="••••••••" required> 
-                    <button type="submit" class="btn-secure" style="margin-top: 16px;"><i class="fas fa-sign-in-alt"></i> Login to Workspace</button>
+                    <input type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password" required> 
+                    
+                    <button type="submit" class="btn-primary"><i class="fas fa-sign-in-alt"></i> Access Workspace</button>
                 </form>
-                <div style="margin-top: 24px; text-align: center; font-size: 13px; color: var(--text-muted);">
-                    <span class="th-en" data-th="พนักงานใหม่?" data-en="New employee?">พนักงานใหม่?</span> 
-                    <button class="btn-text th-en" data-th="ลงทะเบียนระบบ" data-en="Register access" onclick="Auth.toggle('register')">ลงทะเบียนระบบ</button>
-                </div>
+                
+                <button class="btn-text th-en" data-th="พนักงานใหม่? ลงทะเบียนระบบ" data-en="New employee? Register access" onclick="Auth.toggle('register')">
+                    พนักงานใหม่? ลงทะเบียนระบบ
+                </button>
             </div>
 
             <div id="form-register" style="display: none;">
                 <form onsubmit="event.preventDefault(); Auth.register();">
                     <label class="th-en" data-th="ชื่อ-นามสกุล" data-en="Full Name">ชื่อ-นามสกุล</label>
-                    <input type="text" id="reg-name" required>
+                    <input type="text" id="reg-name" placeholder="John Doe" required>
+                    
                     <label class="th-en" data-th="รหัสพนักงาน" data-en="Desired Username">รหัสพนักงาน</label>
-                    <input type="text" id="reg-user" required>
+                    <input type="text" id="reg-user" placeholder="EMP-001" required>
+                    
                     <label class="th-en" data-th="รหัสผ่าน" data-en="Password">รหัสผ่าน</label>
-                    <input type="password" id="reg-pass" required>
+                    <input type="password" id="reg-pass" placeholder="••••••••" required>
+                    
                     <label class="th-en" data-th="ระดับสิทธิ์ (Role)" data-en="System Role">ระดับสิทธิ์ (Role)</label>
-                  <select id="reg-role">
+                    <select id="reg-role">
                         <option value="employee">Staff (พนักงานทั่วไป)</option>
                         <option value="head">Supervisor (หัวหน้างาน)</option> 
                         <option value="admin">Manager (HR)</option>
                         <option value="it">System Administrator (IT)</option>
-                  </select>
-                    <button type="submit" class="btn-primary" style="margin-top: 16px; padding: 14px; width: 100%;"><i class="fas fa-user-plus"></i> Create Account</button>
+                    </select>
+                    
+                    <button type="submit" class="btn-primary"><i class="fas fa-user-plus"></i> Create Account</button>
                 </form>
-                <div style="margin-top: 24px; text-align: center; font-size: 13px;">
-                    <button class="btn-text th-en" data-th="ย้อนกลับไปหน้าล็อกอิน" data-en="Back to Login" onclick="Auth.toggle('login')"><i class="fas fa-arrow-left"></i> ย้อนกลับ</button>
-                </div>
+                
+                <button class="btn-text th-en" data-th="มีบัญชีอยู่แล้ว? ย้อนกลับ" data-en="Already have an account? Go back" onclick="Auth.toggle('login')">
+                    <i class="fas fa-arrow-left"></i> ย้อนกลับไปหน้าล็อกอิน
+                </button>
             </div>
             
-            <div style="margin-top: 24px; text-align: center; border-top: 1px solid var(--border); padding-top: 16px;">
-            <button type="button" class="lang-switch" onclick="toggleLanguage(event)"><i class="fas fa-globe"></i> Switch Language</button>
-            </div>
-            
-            <div style="text-align: center; margin-top: 16px; font-size: 11px; color: #94a3b8;">
-                Developed & Maintained by IT Department
-            </div>
+            <button type="button" class="lang-switch" onclick="toggleLanguage(event)">
+                <i class="fas fa-globe"></i> <span class="th-en" data-th="Switch to English" data-en="เปลี่ยนเป็นภาษาไทย">Switch Language</span>
+            </button>
         </div>
     </div>
 
     <div id="app-view">
+        
         <aside class="sidebar no-print">
             <div class="sidebar-header">
-                <div style="display: flex; align-items: center; gap: 12px;">
+                <div class="flex-between" style="justify-content: flex-start; gap: 16px;">
+                    <div style="background: linear-gradient(135deg, #4f46e5, #06b6d4); border-radius: 12px; padding: 10px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(79, 70, 229, 0.3);">
+                        <i class="fas fa-layer-group" style="color: white; font-size: 18px; margin: 0;"></i>
+                    </div>
                     <div>
-                        <div style="font-weight: 700; font-size: 15px; letter-spacing: -0.01em;">S&J International</div>
-                        <div style="font-size: 10px; color: #94a3b8; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 2px;">HR Portal v1.3</div>
+                        <h2>S&J Inter</h2>
+                        <p>HR Portal v2.0</p>
                     </div>
                 </div>
             </div>
-            <nav class="nav-menu" id="nav-menu"></nav>
-            <div style="padding: 24px; background: rgba(0,0,0,0.2);">
-                <button style="width:100%; background:rgba(255,255,255,0.1); color:white; border:1px solid rgba(255,255,255,0.1); padding:12px; border-radius:var(--radius-sm); cursor:pointer;" onclick="Auth.logout()"><i class="fas fa-sign-out-alt"></i> <span class="th-en" data-th="ออกจากระบบ" data-en="Sign Out">ออกจากระบบ</span></button>
+            
+            <nav class="nav-menu" id="nav-menu">
+                </nav>
+            
+            <div style="padding: 24px; margin-top: auto;">
+                <button class="btn-outline" style="width:100%; background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.1); color: #cbd5e1;" onclick="Auth.logout()">
+                    <i class="fas fa-sign-out-alt"></i> <span class="th-en" data-th="ออกจากระบบ" data-en="Sign Out">ออกจากระบบ</span>
+                </button>
             </div>
         </aside>
 
         <main class="main-content">
+            
             <header class="topbar no-print">
                 <button class="hamburger-btn" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
+                
                 <div class="tools-area">
                     <button class="lang-switch" onclick="toggleLanguage()" id="top-lang-btn">EN</button>
                     <div class="bell-icon" onclick="Notif.toggle(); document.getElementById('notif-badge').style.display = 'none';">
-                        <i class="fas fa-bell"></i> <span class="bell-badge" id="notif-badge" style="display:none;">0</span>
+                        <i class="fas fa-bell"></i> 
+                        <span class="bell-badge" id="notif-badge" style="display:none;">0</span>
                     </div>
                 </div>
 
                 <div class="notif-dropdown" id="notif-dropdown">
-                    <div style="padding: 16px 20px; border-bottom: 1px solid var(--border); font-weight: 700; font-size: 14px; background: #f8fafc;">System Notifications</div>
+                    <div style="padding: 20px; border-bottom: 1px solid var(--border-color); font-weight: 800; font-size: 14px; background: var(--bg-hover); display: flex; align-items: center; gap: 8px;">
+                        <i class="fas fa-inbox text-muted"></i> System Notifications
+                    </div>
                     <div id="notif-list"></div>
                 </div>
 
-                <div style="display: flex; align-items: center; gap: 12px;">
+                <div style="display: flex; align-items: center; gap: 16px;">
                     <div style="text-align: right;">
-                        <div id="user-name" style="font-weight: 600; font-size: 14px; color: var(--primary);">Name</div>
-                        <div id="user-dept" style="font-size: 12px; font-weight: 500; color: var(--text-muted);">Role</div>
+                        <div id="user-name" style="font-weight: 700; font-size: 14px; color: var(--text-heading);">Name</div>
+                        <div id="user-dept" style="font-size: 12px; font-weight: 600; color: var(--brand-main);">Role</div>
                     </div>
-                    <img src="" id="avatar-img" style="width: 40px; height: 40px; border-radius: 50%; box-shadow: var(--shadow-sm); border: 2px solid white; object-fit: cover;" alt="Avatar">
+                    <img src="" id="avatar-img" style="width: 44px; height: 44px; border-radius: 14px; box-shadow: var(--shadow-sm); border: 2px solid white; object-fit: cover;" alt="Avatar">
                 </div>
             </header>
             
-            <div class="content-area" id="page-content"></div>
+            <section class="content-area" id="page-content">
+                </section>
             
-            <footer style="padding: 20px 32px; text-align: center; border-top: 1px solid var(--border); color: var(--text-muted); font-size: 12px; background: var(--bg-main);">
-                &copy; 2026 S&J International Co., Ltd. All rights reserved. | IT Support Division
-            </footer>
         </main>
     </div>
 
     <div class="modal" id="modal-leave">
         <div class="modal-content">
-            <div class="flex-between" style="margin-bottom: 24px;">
-                <h1 style="margin:0; font-size: 20px;" class="th-en" data-th="ขอลางาน" data-en="Request Leave">ขอลางาน</h1>
-                <button class="btn-text" style="font-size: 20px; color: var(--text-muted);" onclick="App.closeModal('modal-leave')"><i class="fas fa-times"></i></button>
+            <div class="details-header" style="padding: 0 0 24px 0; background: transparent; border-bottom: 1px solid var(--border-color); margin-bottom: 24px;">
+                <h1 style="margin:0; font-size: 20px;" class="th-en" data-th="📝 บันทึกขอลางาน" data-en="📝 Request Leave">📝 ขอลางาน</h1>
+                <button class="details-close" onclick="App.closeModal('modal-leave')"><i class="fas fa-times"></i></button>
             </div>
+            
             <form onsubmit="event.preventDefault(); App.submitLeave();">
-                <div class="grid-2" style="margin-bottom: 16px;">
+                <div class="grid-2">
                     <div>
-                        <label class="th-en" data-th="ประเภท" data-en="Type">ประเภท</label>
-                        <select id="lv-type"><option>Annual Leave (พักร้อน)</option><option>Sick Leave (ลาป่วย)</option></select>
+                        <label class="th-en" data-th="ประเภทการลา" data-en="Leave Type">ประเภทการลา</label>
+                        <select id="lv-type">
+                            <option>Annual Leave (พักร้อน)</option>
+                            <option>Sick Leave (ลาป่วย)</option>
+                        </select>
                     </div>
                     <div>
                         <label class="th-en" data-th="รูปแบบ" data-en="Format">รูปแบบ</label>
-                        <select id="lv-format" onchange="App.toggleLeaveFormat(this.value)"><option value="fullday">เต็มวัน</option><option value="hourly">รายชั่วโมง</option></select>
+                        <select id="lv-format" onchange="App.toggleLeaveFormat(this.value)">
+                            <option value="fullday">เต็มวัน (Full Day)</option>
+                            <option value="hourly">รายชั่วโมง (Hourly)</option>
+                        </select>
                     </div>
                 </div>
-                <div class="grid-2" id="input-fullday" style="margin-bottom: 16px;">
+                
+                <div class="grid-2" id="input-fullday">
                     <div><label class="th-en" data-th="เริ่มวันที่" data-en="Start Date">เริ่มวันที่</label><input type="date" id="lv-start-date" required></div>
                     <div><label class="th-en" data-th="ถึงวันที่" data-en="End Date">ถึงวันที่</label><input type="date" id="lv-end-date" required></div>
                 </div>
-                <div class="grid-3" id="input-hourly" style="display: none; margin-bottom: 16px;">
+                
+                <div class="grid-3" id="input-hourly" style="display: none;">
                     <div><label>วันที่</label><input type="date" id="lv-single-date"></div>
                     <div><label>เวลาเริ่ม</label><input type="time" id="lv-time-start"></div>
                     <div><label>เวลาสิ้นสุด</label><input type="time" id="lv-time-end"></div>
                 </div>
-                <label class="th-en" data-th="เหตุผลเพิ่มเติม" data-en="Reason">เหตุผล</label>
-                <textarea id="lv-reason" required rows="2"></textarea>
+                
+                <label class="th-en" data-th="เหตุผลเพิ่มเติม" data-en="Reason">เหตุผลเพิ่มเติม</label>
+                <textarea id="lv-reason" required rows="3" placeholder="ระบุเหตุผลการลา..."></textarea>
 
                 <label class="th-en" data-th="แนบเอกสาร (ถ้ามี)" data-en="Attach Document (Optional)">แนบเอกสาร (ใบรับรองแพทย์ ฯลฯ)</label>
-                <input type="file" id="lv-file" accept="image/*,.pdf" style="margin-bottom: 16px; background: white;">
+                <input type="file" id="lv-file" accept="image/*,.pdf" style="background: white;">
 
-                <div style="display: flex; gap: 12px; margin-top: 16px;">
+                <div class="flex-between" style="gap: 16px; margin-top: 32px;">
                     <button type="button" class="btn-outline" style="flex: 1;" onclick="App.closeModal('modal-leave')">Cancel</button>
                     <button type="submit" class="btn-primary" style="flex: 2;"><i class="fas fa-paper-plane"></i> Submit Request</button>
                 </div>
@@ -158,22 +194,24 @@
 
     <div class="modal" id="modal-ot">
         <div class="modal-content">
-            <div class="flex-between" style="margin-bottom: 24px;">
-                <h1 style="margin:0; font-size: 20px;" class="th-en" data-th="บันทึกขอทำ OT" data-en="Request OT">บันทึกขอทำ OT</h1>
-                <button class="btn-text" style="font-size: 20px; color: var(--text-muted);" onclick="App.closeModal('modal-ot')"><i class="fas fa-times"></i></button>
+            <div class="details-header" style="padding: 0 0 24px 0; background: transparent; border-bottom: 1px solid var(--border-color); margin-bottom: 24px;">
+                <h1 style="margin:0; font-size: 20px;" class="th-en" data-th="🌙 บันทึกขอทำ OT" data-en="🌙 Request OT">🌙 บันทึกขอทำ OT</h1>
+                <button class="details-close" onclick="App.closeModal('modal-ot')"><i class="fas fa-times"></i></button>
             </div>
+            
             <form onsubmit="event.preventDefault(); App.submitOT();">
-                <div class="grid-2" style="margin-bottom: 16px;">
-                    <div><label class="th-en" data-th="วันที่" data-en="Date">วันที่</label><input type="date" id="ot-date" required></div>
-                    <div><label class="th-en" data-th="ชั่วโมง" data-en="Hours">ชั่วโมง</label><input type="number" step="0.5" id="ot-hours" required></div>
+                <div class="grid-2">
+                    <div><label class="th-en" data-th="วันที่ปฏิบัติงาน" data-en="Date">วันที่ปฏิบัติงาน</label><input type="date" id="ot-date" required></div>
+                    <div><label class="th-en" data-th="จำนวนชั่วโมง" data-en="Hours">จำนวนชั่วโมง</label><input type="number" step="0.5" id="ot-hours" placeholder="เช่น 2.5" required></div>
                 </div>
-                <label class="th-en" data-th="รายละเอียดงาน" data-en="Task">รายละเอียดงาน</label>
-                <textarea id="ot-reason" required rows="2"></textarea>
+                
+                <label class="th-en" data-th="รายละเอียดงานที่ทำ" data-en="Task Details">รายละเอียดงานที่ทำ</label>
+                <textarea id="ot-reason" required rows="3" placeholder="ระบุรายละเอียดงาน..."></textarea>
 
                 <label class="th-en" data-th="แนบหลักฐาน (ถ้ามี)" data-en="Attach Evidence (Optional)">แนบหลักฐาน (ถ้ามี)</label>
-                <input type="file" id="ot-file" accept="image/*,.pdf" style="margin-bottom: 16px; background: white;">
+                <input type="file" id="ot-file" accept="image/*,.pdf" style="background: white;">
 
-                <div style="display: flex; gap: 12px; margin-top: 16px;">
+                <div class="flex-between" style="gap: 16px; margin-top: 32px;">
                      <button type="button" class="btn-outline" style="flex: 1;" onclick="App.closeModal('modal-ot')">Cancel</button>
                      <button type="submit" class="btn-primary" style="flex: 2;"><i class="fas fa-paper-plane"></i> Submit Request</button>
                 </div>
@@ -181,15 +219,17 @@
         </div>
     </div>
 
-  <div id="chat-widget" class="chat-widget" style="display: none;">
-        <div class="chat-header" onclick="Chat.toggle(event)"> <i class="fas fa-headset"></i> HR Helpdesk
-            <span id="chat-unread" class="badge" style="background:#ef4444; color:white; display:none; margin-left:auto; border:none;">New</span>
+    <div id="chat-widget" class="chat-widget" style="display: none;">
+        <div class="chat-header" onclick="Chat.toggle(event)"> 
+            <i class="fas fa-headset" style="font-size: 18px;"></i> HR Helpdesk Support
+            <span id="chat-unread" class="badge" style="background: var(--danger); color: white; display: none; margin-left: auto; box-shadow: 0 2px 8px rgba(244, 63, 94, 0.4);">New Message</span>
         </div>
+        
         <div class="chat-body" id="chat-body" style="display:none;">
             <div id="chat-messages" class="chat-messages"></div>
             <form class="chat-input" onsubmit="event.preventDefault(); Chat.send();">
-                <input type="text" id="chat-text" placeholder="Type a message..." required autocomplete="off">
-                <button type="submit" class="btn-primary" style="padding: 10px 14px;"><i class="fas fa-paper-plane"></i></button>
+                <input type="text" id="chat-text" placeholder="Type your message..." required autocomplete="off">
+                <button type="submit" class="btn-primary" style="padding: 14px; border-radius: 12px;"><i class="fas fa-paper-plane" style="margin: 0;"></i></button>
             </form>
         </div>
     </div>
@@ -199,21 +239,9 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
     <script src="script.js"></script>
-    <script>
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js')
-          .then(registration => {
-            console.log('ServiceWorker registration successful');
-          })
-          .catch(err => {
-            console.log('ServiceWorker registration failed: ', err);
-          });
-      });
-    }
-  </script>
-  <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
 </body>
 </html>
