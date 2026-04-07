@@ -1447,4 +1447,31 @@ window.onload = () => {
     setTimeout(() => {
         startApp();
     }, 150);
+    // ==========================================
+// 📱 MOBILE RESPONSIVE FIX (ปุ่มแฮมเบอร์เกอร์)
+// ==========================================
+function toggleSidebar() {
+    const sidebar = document.querySelector('.sidebar');
+    if (sidebar) {
+        sidebar.classList.toggle('show');
+    }
+}
+
+// ✨ ฟังก์ชันเสริมความหล่อ: คลิกข้างนอก หรือ คลิกลิงก์เมนู แล้วให้ Sidebar หดกลับอัตโนมัติ
+document.addEventListener('click', (e) => {
+    const sidebar = document.querySelector('.sidebar');
+    const hamburger = document.querySelector('.hamburger-btn');
+    
+    // ถ้า Sidebar เปิดอยู่ในมือถือ
+    if (sidebar && sidebar.classList.contains('show')) {
+        // ถ้าจุดที่คลิก ไม่ใช่ Sidebar และ ไม่ใช่ปุ่มแฮมเบอร์เกอร์ (คือการคลิกพื้นที่ว่างข้างนอก)
+        if (!sidebar.contains(e.target) && !hamburger.contains(e.target)) {
+            sidebar.classList.remove('show');
+        }
+        // หรือถ้าคลิกที่ปุ่มเมนู (nav-item) ก็ให้หดเก็บเลย จะได้ไม่บังจอ
+        if (e.target.closest('.nav-item')) {
+            sidebar.classList.remove('show');
+        }
+    }
+});
 };
