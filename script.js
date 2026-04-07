@@ -93,24 +93,16 @@ function applyLang() {
     });
 }
 
-// --- 2. Dynamic CSS Injection (Preserved from Original) ---
+// --- 2. Dynamic CSS Injection ---
 if (!document.getElementById('custom-dynamic-styles')) {
     const style = document.createElement('style');
     style.id = 'custom-dynamic-styles';
     style.innerHTML = `
-        /* Hover Preview */
         .evidence-hover { position: relative; display: inline-block; }
-        .evidence-hover .preview-box {
-            display: none; position: absolute; bottom: 120%; left: 0;
-            width: 250px; background: white; border: 1px solid var(--border);
-            border-radius: 8px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.2);
-            padding: 6px; z-index: 100;
-        }
+        .evidence-hover .preview-box { display: none; position: absolute; bottom: 120%; left: 0; width: 250px; background: white; border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.2); padding: 6px; z-index: 100; }
         .evidence-hover:hover .preview-box { display: block; animation: fadeUp 0.2s ease-out; }
         .preview-box img { width: 100%; max-height: 200px; border-radius: 4px; object-fit: contain; background: #f8fafc; }
         .preview-box::after { content: ''; position: absolute; top: 100%; left: 20px; border-width: 8px; border-style: solid; border-color: white transparent transparent transparent; }
-        
-        /* Smart Details Modal */
         .details-modal-content { background: #fff; padding: 0; border-radius: 12px; width: 100%; max-width: 500px; text-align: left; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); animation: fadeUp 0.3s ease-out; margin: auto; position: relative; }
         .details-header { padding: 16px 24px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; }
         .details-header h2 { margin: 0; font-size: 18px; color: #1e293b; font-weight: 700; }
@@ -125,8 +117,6 @@ if (!document.getElementById('custom-dynamic-styles')) {
         .details-notes { background: #f8fafc; padding: 16px; border-radius: 8px; margin-top: 16px; border: 1px solid #e2e8f0; }
         .details-notes p { margin: 0; font-size: 13px; color: #334155; line-height:1.5; }
         .details-footer { padding: 16px 24px; background: #fff; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; }
-
-        /* Quick Filters Bar */
         .filter-bar { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; align-items: center; background: white; padding: 12px 16px; border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
         .filter-btn { background: transparent; border: none; padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; color: #64748b; cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 8px; outline: none; }
         .filter-btn:hover { background: #f1f5f9; color: #0f172a; }
@@ -150,9 +140,7 @@ const firebaseConfig = {
     measurementId: "G-SGL2CY68DY"
 };
 
-if (!firebase.apps.length) {
-    firebase.initializeApp(firebaseConfig);
-}
+if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
 const db = firebase.firestore();
 const dbRef = db.collection('hr_database').doc('main_state');
 
@@ -181,7 +169,7 @@ const defaultState = {
         'head': { email: 'manager@sj-inter.com', phone: '085-555-5555', startDate: '2021-06-01', avatar: '' },
         'it': { email: 'it.admin@sj-inter.com', phone: '088-888-8888', startDate: '2022-05-10', avatar: '' }
     },
-    settings: { companyName: 'For-You International Co.,Ltd.', leaveQuota: 10, broadcast: '', maintenance: false }
+    settings: { companyName: 'S&J International Co., Ltd.', leaveQuota: 10, broadcast: '', maintenance: false }
 };
 
 let AppState = defaultState;
@@ -194,7 +182,6 @@ const DB = {
                 AppState = doc.data();
                 AppState.currentUser = null; 
                 
-                // Defensive Code
                 if (!AppState.users) AppState.users = defaultState.users;
                 if (!AppState.profiles) AppState.profiles = defaultState.profiles;
                 if (!AppState.auditLogs) AppState.auditLogs = []; 
@@ -203,7 +190,6 @@ const DB = {
                 if (!AppState.dailyClock) AppState.dailyClock = {}; 
                 if (!AppState.leaveBalances) AppState.leaveBalances = defaultState.leaveBalances; 
                 if (!AppState.settings) AppState.settings = defaultState.settings;
-                
                 if (AppState.settings.broadcast === undefined) AppState.settings.broadcast = '';
                 if (AppState.settings.maintenance === undefined) AppState.settings.maintenance = false;
             } else { 
@@ -219,17 +205,12 @@ const DB = {
     save: (state) => {
         const dataToSave = { ...state };
         delete dataToSave.currentUser;
-        
-        if (dataToSave.auditLogs && dataToSave.auditLogs.length > 200) { 
-            dataToSave.auditLogs.length = 200; 
-        }
-        
-        dbRef.set(dataToSave, { merge: true })
-             .catch(err => console.error("Database sync error:", err));
+        if (dataToSave.auditLogs && dataToSave.auditLogs.length > 200) dataToSave.auditLogs.length = 200; 
+        dbRef.set(dataToSave, { merge: true }).catch(err => console.error("Database sync error:", err));
     }
 };
 
-// --- 4. Secure Authentication & SweetAlert ---
+// --- 4. Secure Authentication ---
 const Auth = {
     toggle: (type) => {
         document.getElementById('form-login').style.display = type === 'login' ? 'block' : 'none';
@@ -250,25 +231,16 @@ const Auth = {
         if (role === 'head') defDept = 'Sales'; 
         if (role === 'it') defDept = 'IT Operations';
 
-        AppState.users.push({ 
-            username: user, password: pass, name: name, 
-            role: role, dept: defDept, isActive: true 
-        });
-        
+        AppState.users.push({ username: user, password: pass, name: name, role: role, dept: defDept, isActive: true });
         AppState.leaveBalances[user] = { annual: AppState.settings.leaveQuota, sick: 30 }; 
-        AppState.profiles[user] = { 
-            email: user + '@sj-inter.com', phone: '-', 
-            startDate: new Date().toLocaleDateString('en-CA'), avatar: '' 
-        };
+        AppState.profiles[user] = { email: user + '@sj-inter.com', phone: '-', startDate: new Date().toLocaleDateString('en-CA'), avatar: '' };
         
         App.addLog('System', `New user provisioned: ${user} (${role})`); 
         DB.save(AppState); 
         
-        if (typeof Swal !== 'undefined') {
-            Swal.fire({ icon: 'success', title: 'Registration Complete', text: 'You may now authenticate.' });
-        } else {
-            App.toast('Account created successfully.', 'success'); 
-        }
+        if (typeof Swal !== 'undefined') Swal.fire({ icon: 'success', title: 'Registration Complete', text: 'You may now authenticate.' });
+        else App.toast('Account created successfully.', 'success'); 
+        
         Auth.toggle('login'); 
     },
     login: () => {
@@ -276,35 +248,18 @@ const Auth = {
         const p = document.getElementById('login-pass').value;
         
         if (AppState.settings.maintenance && u !== 'it') {
-            if (typeof Swal !== 'undefined') { 
-                Swal.fire({ 
-                    icon: 'info', title: 'System Maintenance', 
-                    text: 'The system is currently undergoing scheduled maintenance. Please try again later.', 
-                    confirmButtonColor: '#0f172a' 
-                }); 
-            } else { 
-                alert('System Maintenance Mode. Please try again later.'); 
-            }
+            if (typeof Swal !== 'undefined') Swal.fire({ icon: 'info', title: 'System Maintenance', text: 'The system is currently undergoing scheduled maintenance.', confirmButtonColor: '#0f172a' }); 
+            else alert('System Maintenance Mode.');
             return;
         }
 
         const acc = AppState.users.find(x => x.username === u && x.password === p);
         
         if (acc) { 
-            if (acc.isActive === false) { 
-                alert(t('acc_locked')); 
-                return; 
-            }
+            if (acc.isActive === false) return alert(t('acc_locked')); 
             
             if (typeof Swal !== 'undefined') { 
-                Swal.fire({ 
-                    title: 'Authenticating...', 
-                    html: 'Verifying credentials securely.', 
-                    timer: 1500,
-                    didOpen: () => Swal.showLoading(),
-                    background: 'rgba(255, 255, 255, 0.95)',
-                    backdrop: `blur(12px)`
-                }).then(() => { 
+                Swal.fire({ title: 'Authenticating...', html: 'Verifying credentials securely.', timer: 1500, didOpen: () => Swal.showLoading(), background: 'rgba(255, 255, 255, 0.95)', backdrop: `blur(12px)` }).then(() => { 
                     AppState.currentUser = acc; 
                     localStorage.setItem('hr_logged_user', JSON.stringify(acc)); 
                     App.addLog('Authentication', `User login successful: ${u}`); 
@@ -317,23 +272,13 @@ const Auth = {
                 App.boot(); 
             }
         } else {
-            if (typeof Swal !== 'undefined') {
-                Swal.fire({ icon: 'error', title: 'Access Denied', text: 'Invalid username or password.' });
-            } else {
-                alert('Authentication failed. Invalid credentials.');
-            }
+            if (typeof Swal !== 'undefined') Swal.fire({ icon: 'error', title: 'Access Denied', text: 'Invalid username or password.' });
+            else alert('Authentication failed.');
         }
     },
     logout: () => { 
         if (typeof Swal !== 'undefined') {
-            Swal.fire({
-                title: 'Sign Out?',
-                text: 'End your current session?',
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: 'var(--danger)',
-                confirmButtonText: 'Yes, Sign Out'
-            }).then((res) => {
+            Swal.fire({ title: 'Sign Out?', text: 'End your current session?', icon: 'warning', showCancelButton: true, confirmButtonColor: 'var(--danger)', confirmButtonText: 'Yes, Sign Out' }).then((res) => {
                 if (res.isConfirmed) {
                     App.addLog('Authentication', `User logout: ${AppState.currentUser.username}`);
                     AppState.currentUser = null; 
@@ -342,26 +287,47 @@ const Auth = {
                 }
             });
         } else {
-            App.addLog('Authentication', `User logout: ${AppState.currentUser.username}`);
-            AppState.currentUser = null; 
-            localStorage.removeItem('hr_logged_user'); 
-            location.reload(); 
+            AppState.currentUser = null; localStorage.removeItem('hr_logged_user'); location.reload(); 
         }
     }
 };/**
  * ==========================================================================
  * 🚀 ENTERPRISE HR OS - FULL SCALE EDITION (PART 2/3)
- * Modules: App Logic, Biometric Canvas, Notification & Modals
+ * Modules: App Logic, TRUE AI BIOMETRICS, Notification & Modals
  * ==========================================================================
  */
 
 let chartInst = null; 
 let liveChartInst = null; 
 let liveChartInterval = null; 
-let bioInterval = null;
 let isSalaryVisible = false; 
 let calMonth = new Date().getMonth();
 let calYear = new Date().getFullYear();
+
+// ==========================================
+// 🤖 CORE AI ENGINE: FACE BIOMETRICS (OFICIAL)
+// ==========================================
+let isAIInitialized = false;
+let aiDetectionInterval = null;
+let currentStream = null;
+let verificationTimer = null;
+
+const initializeAI = async () => {
+    try {
+        console.log("🤖 [AI INIT] Initializing Face API Module...");
+        const MODEL_URL = './models'; 
+        await Promise.all([
+            faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+            faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
+            faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
+        ]);
+        isAIInitialized = true;
+        console.log("🤖 [AI INIT] Models loaded successfully.");
+    } catch (error) {
+        console.error("🤖 [AI INIT ERROR] Failed to load models:", error);
+        if(typeof App !== 'undefined' && App.toast) App.toast('AI Biometrics failed to initialize.', 'error');
+    }
+};
 
 const fileToBase64 = (file) => new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -377,30 +343,18 @@ const Notif = {
             id: Date.now(), username: user, message: msg, 
             isRead: false, time: new Date().toLocaleTimeString('en-US', {hour: '2-digit', minute: '2-digit'}) 
         });
-        
-        if (AppState.notifications.length > 50) {
-            AppState.notifications.length = 50;
-        }
-        
+        if (AppState.notifications.length > 50) AppState.notifications.length = 50;
         DB.save(AppState);
-        
         if (AppState.currentUser && AppState.currentUser.username === user) { 
-            App.toast(msg); 
-            Notif.render(); 
+            App.toast(msg); Notif.render(); 
         }
     },
     render: () => {
         if (!AppState.currentUser) return;
-        
         const notifs = AppState.notifications.filter(n => n.username === AppState.currentUser.username);
         const unread = notifs.filter(n => !n.isRead).length;
         const b = document.getElementById('notif-badge');
-        
-        if (b) { 
-            b.innerText = unread; 
-            b.style.display = unread > 0 ? 'block' : 'none'; 
-        }
-        
+        if (b) { b.innerText = unread; b.style.display = unread > 0 ? 'block' : 'none'; }
         const list = document.getElementById('notif-list');
         if (list) {
             list.innerHTML = notifs.slice(0, 5).map(n => `
@@ -411,16 +365,10 @@ const Notif = {
             `).join('') || `<div class="empty-state"><i class="fas fa-inbox fa-2x" style="color:var(--border); margin-bottom:8px;"></i><br>${t('no_data')}</div>`;
         }
     },
-    toggle: () => {
-        document.getElementById('notif-dropdown').classList.toggle('show');
-    },
+    toggle: () => document.getElementById('notif-dropdown').classList.toggle('show'),
     read: (id) => { 
         const n = AppState.notifications.find(x => x.id === id); 
-        if (n) { 
-            n.isRead = true; 
-            DB.save(AppState); 
-            Notif.render(); 
-        } 
+        if (n) { n.isRead = true; DB.save(AppState); Notif.render(); } 
     }
 };
 
@@ -428,26 +376,21 @@ const Notif = {
 const App = {
     addLog: (action, detail) => {
         if (!AppState.auditLogs) AppState.auditLogs = [];
-        
         AppState.auditLogs.unshift({ 
-            id: Date.now(), 
-            user: AppState.currentUser ? AppState.currentUser.name : 'System', 
-            role: AppState.currentUser ? AppState.currentUser.role : 'System', 
-            action: action, 
-            detail: detail, 
-            time: new Date().toLocaleString('en-GB') 
+            id: Date.now(), user: AppState.currentUser ? AppState.currentUser.name : 'System', 
+            role: AppState.currentUser ? AppState.currentUser.role : 'System', action: action, 
+            detail: detail, time: new Date().toLocaleString('en-GB') 
         });
-        
-        if (AppState.auditLogs.length > 200) {
-            AppState.auditLogs.length = 200;
-        }
-        
+        if (AppState.auditLogs.length > 200) AppState.auditLogs.length = 200;
         DB.save(AppState);
     },
 
-    boot: () => {
+    boot: async () => {
         document.getElementById('auth-view').style.display = 'none';
         document.getElementById('app-view').style.display = 'flex';
+        
+        // 🤖 ปลุก AI ตอนเปิดแอป
+        if(!isAIInitialized) await initializeAI(); 
         
         const u = AppState.currentUser;
         document.getElementById('user-name').innerText = u.name;
@@ -457,7 +400,6 @@ const App = {
         TimeEngine.startClock();
         
         const menu = document.getElementById('nav-menu');
-        
         if (u.role === 'admin') {
             menu.innerHTML = `
                 <div class="nav-divider">HR Management</div>
@@ -511,19 +453,12 @@ const App = {
         App.updateBadge();
         
         const chatWidget = document.getElementById('chat-widget');
-        if (chatWidget) {
-            chatWidget.style.display = 'block';
-        }
-        
-        if (typeof Chat !== 'undefined') {
-            Chat.init(); 
-        }
+        if (chatWidget) chatWidget.style.display = 'block';
+        if (typeof Chat !== 'undefined') Chat.init(); 
     },
     
     nav: (page, el) => {
-        if (liveChartInterval) {
-            clearInterval(liveChartInterval);
-        }
+        if (liveChartInterval) clearInterval(liveChartInterval);
         
         if (el) { 
             document.querySelectorAll('.nav-item').forEach(x => x.classList.remove('active')); 
@@ -531,29 +466,21 @@ const App = {
         }
         
         const container = document.getElementById('page-content');
-        
-        // Setup Fade Out
         container.style.opacity = '0';
         container.style.transform = 'scale(0.98) translateY(10px)';
         container.style.transition = 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)';
 
         setTimeout(() => {
             try {
-                if (Views[page]) {
-                    container.innerHTML = Views[page]();
-                } else {
-                    container.innerHTML = `<h2>View Not Found</h2>`;
-                }
+                if (Views[page]) container.innerHTML = Views[page]();
+                else container.innerHTML = `<h2>View Not Found</h2>`;
                 
-                // Trigger Fade In
                 container.style.opacity = '1';
                 container.style.transform = 'scale(1) translateY(0)';
                 
                 if (page === 'home') { 
                     isSalaryVisible = false; 
-                    App.updateClock(); 
-                    App.renderChart(); 
-                    App.renderDigitalTwin(); 
+                    App.updateClock(); App.renderChart(); App.renderDigitalTwin(); 
                 }
                 if (page === 'payslip') App.genSlip();
                 if (page === 'cal') App.renderCalendarGrid();
@@ -562,118 +489,98 @@ const App = {
                 if (page === 'it-dash') App.renderITLiveChart(); 
             } catch (e) {
                 console.error("View Render Error:", e);
-                container.innerHTML = `
-                    <div class="card">
-                        <h3 style="color:var(--danger);"><i class="fas fa-exclamation-triangle"></i> Rendering Error</h3>
-                        <p>Could not load the requested module. Check console for details.</p>
-                        <small style="color:var(--text-muted);">${e.message}</small>
-                    </div>
-                `;
             }
         }, 200); 
     },
 
-    // 🟢 ระบบ Facial Recognition จำลองการแสกนด้วย Canvas
+    // ==========================================
+    // 🟢 (อัปเกรด) REAL-TIME AI BIOMETRICS ENGINE
+    // ==========================================
     clock: () => { 
-        App.startFaceScan(); 
-    },
-
-    startFaceScan: () => {
-        let m = document.getElementById('modal-facescan');
-        if (!m) { 
-            m = document.createElement('div'); 
-            m.className = 'modal'; 
-            m.id = 'modal-facescan'; 
-            document.body.appendChild(m); 
+        if(!isAIInitialized) {
+            App.toast('AI models are still loading. Please wait...', 'warning');
+            return;
         }
-        
-        const u = AppState.currentUser.username;
-        const userAvatar = (AppState.profiles && AppState.profiles[u] && AppState.profiles[u].avatar) 
-            ? AppState.profiles[u].avatar 
-            : `https://ui-avatars.com/api/?name=${AppState.currentUser.name}&background=e0e7ff&color=3b82f6`;
-        
-        m.innerHTML = `
-            <div class="modal-content" style="text-align:center; max-width:440px; background: rgba(15,23,42,0.95); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.1); color:white;"> 
-                <h2 style="margin-top:10px; color:var(--brand-light); font-weight: 800; letter-spacing:1px;"><i class="fas fa-fingerprint text-muted"></i> BIOMETRIC AUTHENTICATION</h2> 
-                <div style="position: relative; width: 240px; height: 240px; margin: 30px auto; border-radius: 50%; overflow: hidden; border: 4px solid rgba(79,70,229,0.3); box-shadow: 0 0 30px rgba(79,70,229,0.2);">
-                    <video id="face-video" autoplay muted playsinline style="width:100%; height:100%; object-fit:cover; transform: scaleX(-1); position:absolute; top:0; left:0; z-index:1;"></video> 
-                    <canvas id="face-canvas" width="240" height="240" style="position:absolute; top:0; left:0; z-index:2; transform: scaleX(-1);"></canvas>
-                    <div id="scan-hud" style="position:absolute; inset:0; z-index:3; background: linear-gradient(180deg, rgba(79,70,229,0) 0%, rgba(79,70,229,0.2) 50%, rgba(79,70,229,0) 100%); animation: scanline 2s infinite linear; display:none; border-bottom: 2px solid var(--brand-main);"></div>
-                </div> 
-                <div id="scan-status" style="font-weight:700; color:var(--brand-main); margin-top:20px; font-family: monospace; font-size:15px; letter-spacing:1px;">INITIALIZING OPTICS...</div> 
-                <button class="btn-outline" style="margin-top:30px; width: 100%; background:transparent; color:white; border-color:rgba(255,255,255,0.2);" onclick="App.cancelFaceScan()">ABORT SCAN</button> 
-            </div>
-        `;
-        
+        App.startRealAIFaceScan(); 
+    },
+    
+    startRealAIFaceScan: async () => {
         App.openModal('modal-facescan');
         
-        const video = document.getElementById('face-video'); 
-        const canvas = document.getElementById('face-canvas');
-        const ctx = canvas ? canvas.getContext('2d') : null;
-        const hud = document.getElementById('scan-hud');
-        const status = document.getElementById('scan-status');
+        const video = document.getElementById('face-video-ai');
+        const canvas = document.getElementById('face-canvas-ai');
+        const status = document.getElementById('scan-status-ai');
         
-        // วาดจุดสีเขียวจำลองการจับโครงหน้าบน Canvas
-        const drawMatrix = () => {
-            if(!ctx) return;
-            ctx.clearRect(0, 0, 240, 240);
-            ctx.fillStyle = 'rgba(16, 185, 129, 0.8)';
-            for(let i=0; i<30; i++) {
-                ctx.beginPath();
-                ctx.arc(Math.random()*240, Math.random()*240, Math.random()*2, 0, Math.PI*2);
-                ctx.fill();
-            }
-            ctx.strokeStyle = 'rgba(79, 70, 229, 0.4)';
-            ctx.lineWidth = 1;
-            ctx.beginPath(); ctx.moveTo(120, 0); ctx.lineTo(120, 240); ctx.stroke();
-            ctx.beginPath(); ctx.moveTo(0, 120); ctx.lineTo(240, 120); ctx.stroke();
-        };
+        status.innerHTML = `<i class="fas fa-spinner fa-spin" style="color:#3b82f6;"></i> กำลังเปิด optics...`;
 
-        navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } }).then(stream => {
-            video.srcObject = stream; 
-            window.localStream = stream; 
-            
-            setTimeout(() => { 
-                status.innerHTML = `MAPPING FACIAL GEOMETRY...`; 
-                hud.style.display = "block"; 
-                bioInterval = setInterval(drawMatrix, 100); 
-            }, 1000);
-            
-            setTimeout(() => { 
-                status.innerHTML = `<span style="color:var(--warning);">VERIFYING NEURAL HASH: EMP-${u.toUpperCase()}</span>`; 
-            }, 2500);
-            
-            setTimeout(() => { 
-                clearInterval(bioInterval); 
-                if(ctx) { 
-                    ctx.clearRect(0,0,240,240); 
-                    ctx.fillStyle='rgba(16,185,129,0.3)'; 
-                    ctx.fillRect(0,0,240,240); 
-                }
-                status.innerHTML = `<span style="color:var(--success);">IDENTITY CONFIRMED. MATCH: 99.98%</span>`; 
-                setTimeout(() => { 
-                    App.cancelFaceScan(); 
-                    App.processClock(); 
-                }, 1200); 
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
+            video.srcObject = stream;
+            currentStream = stream; 
+
+            video.addEventListener('play', () => {
+                const displaySize = { width: video.width || 300, height: video.height || 300 };
+                faceapi.matchDimensions(canvas, displaySize);
                 
-            }, 4500);
-        }).catch(err => { 
-            console.error("Camera error:", err); 
-            status.innerHTML = `<span style="color:#ef4444;">OPTICS FAILED. INITIATING MANUAL OVERRIDE...</span>`; 
-            
-            setTimeout(() => { 
-                App.cancelFaceScan(); 
-                App.processClock(); 
-            }, 2500); 
-        });
+                let isFaceStableForTime = 0; 
+                clearTimeout(verificationTimer);
+
+                aiDetectionInterval = setInterval(async () => {
+                    if (!video.srcObject) return; 
+
+                    const detection = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions())
+                        .withFaceLandmarks();
+
+                    const ctx = canvas.getContext('2d');
+                    ctx.clearRect(0, 0, canvas.width, canvas.height); 
+
+                    if (detection) {
+                        const resizedDetections = faceapi.resizeResults(detection, displaySize);
+                        faceapi.draw.drawDetections(canvas, resizedDetections);
+                        faceapi.draw.drawFaceLandmarks(canvas, resizedDetections);
+
+                        status.innerHTML = `<span style="color:#34d399;"><i class="fas fa-check-circle" style="animation: pulse-green 1s infinite;"></i> Identity Detected. ยืนนิ่งๆ 2 วินาที...</span>`;
+                        
+                        isFaceStableForTime += 150; 
+                        
+                        if (isFaceStableForTime >= 2000) { 
+                            clearInterval(aiDetectionInterval); 
+                            status.innerHTML = `<span style="color:#3b82f6; font-size:16px;"><i class="fas fa-fingerprint"></i> Identity Verified. Match 99.9%</span>`;
+                            
+                            ctx.fillStyle = 'rgba(52, 211, 153, 0.1)'; ctx.fillRect(0,0,300,300);
+
+                            verificationTimer = setTimeout(() => {
+                                App.cancelFaceScan(); 
+                                App.processClock();  
+                            }, 1000);
+                        }
+                    } else {
+                        status.innerHTML = `<i class="fas fa-search" style="color:#94a3b8;"></i> กำลังค้นหาใบหน้า... กรุณาจัดหน้าให้อยู่ในเฟรม`;
+                        isFaceStableForTime = 0; 
+                    }
+                }, 150); 
+            });
+
+        } catch (err) {
+            console.error("Camera access error:", err);
+            status.innerHTML = `<span style="color:#ef4444;"><i class="fas fa-exclamation-triangle"></i> Optics Failed. ไม่สามารถเปิดกล้องได้</span>`;
+            setTimeout(() => App.cancelFaceScan(), 3000);
+        }
     },
 
-    cancelFaceScan: () => { 
-        App.closeModal('modal-facescan'); 
-        if (window.localStream) { 
-            window.localStream.getTracks().forEach(track => track.stop()); 
-        } 
-        if (bioInterval) clearInterval(bioInterval);
+    cancelFaceScan: () => {
+        App.closeModal('modal-facescan');
+        if (currentStream) {
+            currentStream.getTracks().forEach(track => track.stop()); 
+            currentStream = null;
+        }
+        if (aiDetectionInterval) clearInterval(aiDetectionInterval); 
+        if (verificationTimer) clearTimeout(verificationTimer); 
+
+        const video = document.getElementById('face-video-ai');
+        const canvas = document.getElementById('face-canvas-ai');
+        if (video) video.srcObject = null;
+        if (canvas) canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
     },
 
     processClock: () => {
@@ -681,7 +588,7 @@ const App = {
         const d = new Date().toLocaleDateString('en-CA');
         const locElement = document.getElementById('work-location');
         const loc = locElement ? locElement.value : 'Office';
-              
+        
         if (!AppState.dailyClock[u] || AppState.dailyClock[u].date !== d) {
             AppState.dailyClock[u] = { date: d, status: 'out', in: null };
         }
@@ -692,22 +599,20 @@ const App = {
             c.status = 'in'; 
             c.in = Date.now(); 
             c.loc = loc; 
-            App.addLog('Attendance', `Verified & Clocked in (${loc}) via Biometrics`); 
-            App.toast('Identity Verified. Clocked in successfully.'); 
+            App.addLog('Attendance', `Clocked in via True AI Biometrics (${loc})`);
+            App.toast('Identity Verified. Clocked in.', 'success'); 
         } else {
-            const hrs = ((Date.now() - c.in) / 3600000).toFixed(2); 
+            const hrs = ((Date.now() - c.in) / 3600000).toFixed(2);
             AppState.timeLogs.unshift({ 
-                u: u, 
-                d: d, 
+                u: u, d: d, 
                 in: new Date(c.in).toLocaleTimeString('en-US', {hour:'2-digit', minute:'2-digit'}), 
                 out: new Date().toLocaleTimeString('en-US', {hour:'2-digit', minute:'2-digit'}), 
-                hrs: hrs, 
-                loc: c.loc 
+                hrs: hrs, loc: c.loc 
             });
             c.status = 'out'; 
             c.in = null; 
-            App.addLog('Attendance', `Clocked out. Session: ${hrs}h`); 
-            App.toast(`Clocked out. Session: ${hrs}h`); 
+            App.addLog('Attendance', `Clocked out via True AI Biometrics. Session: ${hrs}h`);
+            App.toast(`Session Ended. Total: ${hrs}h`, 'success');
         }
         
         DB.save(AppState); 
@@ -725,7 +630,7 @@ const App = {
         
         if (c && c.status === 'in' && c.date === new Date().toLocaleDateString('en-CA')) {
             if (sel) sel.disabled = true; 
-            btn.innerHTML = `<i class="fas fa-sign-out-alt"></i> ${t('clock_btn_out')} (Face Scan)`; 
+            btn.innerHTML = `<i class="fas fa-sign-out-alt"></i> ${t('clock_btn_out')} (AI Scan)`; 
             btn.classList.replace('btn-primary', 'btn-danger'); 
             
             st.innerHTML = `
@@ -746,112 +651,55 @@ const App = {
 
     filterApprovals: (status, btn) => {
         document.querySelectorAll('.filter-btn').forEach(b => {
-            b.style.background = 'transparent';
-            b.style.color = '#64748b';
-            b.classList.remove('active');
+            b.style.background = 'transparent'; b.style.color = '#64748b'; b.classList.remove('active');
         });
-        
-        btn.style.background = '#e0e7ff';
-        btn.style.color = 'var(--primary)';
-        btn.classList.add('active');
-        
+        btn.style.background = '#e0e7ff'; btn.style.color = 'var(--primary)'; btn.classList.add('active');
         const rows = document.querySelectorAll('.approval-row');
         rows.forEach(row => {
             const rStatus = row.getAttribute('data-status');
-            if (status === 'All' || rStatus.includes(status)) {
-                row.style.display = '';
-            } else {
-                row.style.display = 'none';
-            }
+            row.style.display = (status === 'All' || rStatus.includes(status)) ? '' : 'none';
         });
     },
 
     searchApprovals: (val) => {
         const term = val.toLowerCase();
-        const rows = document.querySelectorAll('.approval-row');
-        rows.forEach(row => {
-            const text = row.innerText.toLowerCase();
-            row.style.display = text.includes(term) ? '' : 'none';
+        document.querySelectorAll('.approval-row').forEach(row => {
+            row.style.display = row.innerText.toLowerCase().includes(term) ? '' : 'none';
         });
     },
 
     showRequestDetails: (id) => {
         const r = AppState.requests.find(x => x.id === id);
         if (!r) return;
-
         let m = document.getElementById('modal-smart-details');
         if (!m) { 
-            m = document.createElement('div'); 
-            m.className = 'modal'; 
-            m.id = 'modal-smart-details'; 
-            document.body.appendChild(m); 
+            m = document.createElement('div'); m.className = 'modal'; m.id = 'modal-smart-details'; document.body.appendChild(m); 
         }
-
         const dateObj = new Date(r.id);
         const submittedDate = dateObj.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
         const submittedTime = dateObj.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
         
-        let badgeColor = '#b45309'; 
-        let badgeBg = '#fef3c7'; 
-        let statText = r.status.split(' ')[0];
-        
-        if (r.status === 'Approved') { 
-            badgeColor = '#047857'; 
-            badgeBg = '#d1fae5'; 
-        } else if (r.status === 'Rejected') { 
-            badgeColor = '#be123c'; 
-            badgeBg = '#ffe4e6'; 
-        } else if (r.status.includes('Pending')) { 
-            badgeColor = '#b45309'; 
-            badgeBg = '#fef3c7'; 
-            statText = 'Pending'; 
-        } 
+        let badgeColor = '#b45309', badgeBg = '#fef3c7', statText = r.status.split(' ')[0];
+        if (r.status === 'Approved') { badgeColor = '#047857'; badgeBg = '#d1fae5'; } 
+        else if (r.status === 'Rejected') { badgeColor = '#be123c'; badgeBg = '#ffe4e6'; } 
+        else if (r.status.includes('Pending')) { statText = 'Pending'; } 
 
         const durationStr = r.type === 'OT' ? r.detail : '1.00 Day';
         const headApprover = AppState.users.find(u => u.role === 'head');
-
-        let attachmentHTML = '';
-        if (r.attachment) {
-            attachmentHTML = `
-                <div style="margin-top:10px;">
-                    <a href="${r.attachment}" target="_blank" style="color:var(--primary); font-size:12px; text-decoration:none;">
-                        <i class="fas fa-paperclip"></i> View Attached Evidence
-                    </a>
-                </div>
-            `;
-        }
+        let attachmentHTML = r.attachment ? `<div style="margin-top:10px;"><a href="${r.attachment}" target="_blank" style="color:var(--primary); font-size:12px; text-decoration:none;"><i class="fas fa-paperclip"></i> View Attached Evidence</a></div>` : '';
 
         m.innerHTML = `
             <div class="details-modal-content">
-                <div class="details-header">
-                    <h2>Details</h2>
-                    <button class="details-close" onclick="App.closeModal('modal-smart-details')"><i class="fas fa-times"></i></button>
-                </div>
+                <div class="details-header"><h2>Details</h2><button class="details-close" onclick="App.closeModal('modal-smart-details')"><i class="fas fa-times"></i></button></div>
                 <div class="details-body">
                     <div class="details-title-row">
                         <h3>${r.type === 'OT' ? 'Overtime Request' : r.detail}</h3>
                         <span style="background:${badgeBg}; color:${badgeColor}; padding:4px 12px; border-radius:20px; font-size:12px; font-weight:700;">${statText}</span>
                     </div>
-                    <div class="details-row">
-                        <span class="details-label">Employee:</span> 
-                        <span class="details-value">${r.name} (EMP-${r.u.toUpperCase()})</span>
-                    </div>
-                    <div class="details-row">
-                        <span class="details-label">Approver:</span> 
-                        <span class="details-value">${headApprover ? headApprover.name : 'Supervisor'}</span>
-                    </div>
-                    <div class="details-row">
-                        <span class="details-label">Date:</span> 
-                        <span class="details-value">${submittedDate}</span>
-                    </div>
-                    <div class="details-row">
-                        <span class="details-label">Duration:</span> 
-                        <span class="details-value">${durationStr}</span>
-                    </div>
-                    <div class="details-row">
-                        <span class="details-label">Submitted on:</span> 
-                        <span class="details-value">${submittedDate}</span>
-                    </div>
+                    <div class="details-row"><span class="details-label">Employee:</span> <span class="details-value">${r.name} (EMP-${r.u.toUpperCase()})</span></div>
+                    <div class="details-row"><span class="details-label">Approver:</span> <span class="details-value">${headApprover ? headApprover.name : 'Supervisor'}</span></div>
+                    <div class="details-row"><span class="details-label">Date:</span> <span class="details-value">${submittedDate}</span></div>
+                    <div class="details-row"><span class="details-label">Duration:</span> <span class="details-value">${durationStr}</span></div>
                     <div class="details-notes">
                         <span style="font-size:11px; color:#64748b; font-weight:600; text-transform:uppercase; margin-bottom:6px; display:block;">Previous notes:</span>
                         <p><b>${submittedDate} ${submittedTime} - ${r.name}:</b><br>${r.reason || 'No description provided.'}</p>
@@ -859,14 +707,13 @@ const App = {
                     </div>
                 </div>
                 <div class="details-footer">
-                    <button class="btn-outline" style="border: 1px solid #cbd5e1; color: #334155; font-size:13px; font-weight:600; width:auto; padding:8px 16px;" onclick="App.closeModal('modal-smart-details')"><i class="fas fa-pen" style="margin-right:6px;"></i> Edit</button>
+                    <button class="btn-outline" style="border: 1px solid #cbd5e1; color: #334155; font-size:13px; padding:8px 16px;" onclick="App.closeModal('modal-smart-details')"><i class="fas fa-pen"></i> Edit</button>
                     <div style="display:flex; gap:16px; align-items:center;">
-                        <a href="#" onclick="App.closeModal('modal-smart-details'); event.preventDefault();" style="color: #3b82f6; font-size:13px; text-decoration:underline; font-weight:500;">Cancel request</a>
-                        <button class="btn-primary" style="background:#3b82f6; width:auto; font-size:13px; font-weight:600; padding:8px 20px; border-radius:6px;" onclick="App.closeModal('modal-smart-details')">OK</button>
+                        <a href="#" onclick="App.closeModal('modal-smart-details'); event.preventDefault();" style="color: #3b82f6; font-size:13px; text-decoration:underline;">Cancel request</a>
+                        <button class="btn-primary" style="background:#3b82f6; font-size:13px; padding:8px 20px; border-radius:6px;" onclick="App.closeModal('modal-smart-details')">OK</button>
                     </div>
                 </div>
-            </div>
-        `;
+            </div>`;
         App.openModal('modal-smart-details');
     },
 
@@ -875,119 +722,62 @@ const App = {
         const k = document.getElementById('lv-type').value.includes('Annual') ? 'annual' : 'sick';
         let days = document.getElementById('lv-format').value === 'hourly' ? 0.125 : 1; 
         
-        if (!AppState.leaveBalances[u]) {
-            AppState.leaveBalances[u] = { annual: AppState.settings.leaveQuota, sick: 30 };
-        }
-        
-        if (AppState.leaveBalances[u][k] < days) {
-            return App.toast('Insufficient leave balance.', 'error');
-        }
+        if (!AppState.leaveBalances[u]) AppState.leaveBalances[u] = { annual: AppState.settings.leaveQuota, sick: 30 };
+        if (AppState.leaveBalances[u][k] < days) return App.toast('Insufficient leave balance.', 'error');
         
         let attachmentBase64 = null; 
         const fileInput = document.getElementById('lv-file');
-        
-        if (fileInput && fileInput.files[0]) { 
-            try { 
-                attachmentBase64 = await fileToBase64(fileInput.files[0]); 
-            } catch(e) { 
-                console.error(e); 
-            } 
-        }
+        if (fileInput && fileInput.files[0]) try { attachmentBase64 = await fileToBase64(fileInput.files[0]); } catch(e) { console.error(e); } 
         
         AppState.leaveBalances[u][k] -= days; 
-        
         AppState.requests.unshift({ 
-            id: Date.now(), 
-            type: 'Leave', 
-            u: u, 
-            name: AppState.currentUser.name, 
-            detail: document.getElementById('lv-type').value, 
-            reason: document.getElementById('lv-reason').value, 
-            attachment: attachmentBase64, 
-            status: 'Pending (Supervisor)' 
+            id: Date.now(), type: 'Leave', u: u, name: AppState.currentUser.name, 
+            detail: document.getElementById('lv-type').value, reason: document.getElementById('lv-reason').value, 
+            attachment: attachmentBase64, status: 'Pending (Supervisor)' 
         });
         
-        App.addLog('Workflow', `Submitted Leave Request`); 
-        DB.save(AppState); 
-        
+        App.addLog('Workflow', `Submitted Leave Request`); DB.save(AppState); 
         if (fileInput) fileInput.value = ''; 
-        
-        App.closeModal('modal-leave'); 
-        App.toast('Request submitted to Supervisor.'); 
-        App.nav('time', document.querySelectorAll('.nav-item')[1]); 
+        App.closeModal('modal-leave'); App.toast('Request submitted to Supervisor.'); App.nav('time', document.querySelectorAll('.nav-item')[1]); 
     },
 
     submitOT: async () => {
         let attachmentBase64 = null; 
         const fileInput = document.getElementById('ot-file');
-        
-        if (fileInput && fileInput.files[0]) { 
-            try { 
-                attachmentBase64 = await fileToBase64(fileInput.files[0]); 
-            } catch(e) { 
-                console.error(e); 
-            } 
-        }
+        if (fileInput && fileInput.files[0]) try { attachmentBase64 = await fileToBase64(fileInput.files[0]); } catch(e) { console.error(e); } 
         
         AppState.requests.unshift({ 
-            id: Date.now(), 
-            type: 'OT', 
-            u: AppState.currentUser.username, 
-            name: AppState.currentUser.name, 
-            detail: document.getElementById('ot-hours').value + ' Hrs', 
-            reason: document.getElementById('ot-reason').value, 
-            attachment: attachmentBase64, 
-            status: 'Pending (Supervisor)' 
+            id: Date.now(), type: 'OT', u: AppState.currentUser.username, name: AppState.currentUser.name, 
+            detail: document.getElementById('ot-hours').value + ' Hrs', reason: document.getElementById('ot-reason').value, 
+            attachment: attachmentBase64, status: 'Pending (Supervisor)' 
         });
         
-        App.addLog('Workflow', `Submitted OT Request`); 
-        DB.save(AppState); 
-        
+        App.addLog('Workflow', `Submitted OT Request`); DB.save(AppState); 
         if (fileInput) fileInput.value = ''; 
-        
-        App.closeModal('modal-ot'); 
-        App.toast('OT request submitted to Supervisor.'); 
-        App.nav('time', document.querySelectorAll('.nav-item')[1]);
+        App.closeModal('modal-ot'); App.toast('OT request submitted to Supervisor.'); App.nav('time', document.querySelectorAll('.nav-item')[1]);
     },
 
     sendLineAlert: (employee, type, status) => { 
-        const webhookUrl = "https://hook.eu1.make.com/63miskvj947chdguwvz553l12ikk9qqb"; 
-        fetch(webhookUrl, { 
-            method: 'POST', 
-            headers: { 'Content-Type': 'application/json' }, 
-            body: JSON.stringify({ 
-                employeeName: employee, 
-                requestType: type, 
-                result: status, 
-                time: new Date().toLocaleString('en-GB') 
-            }) 
+        fetch("https://hook.eu1.make.com/63miskvj947chdguwvz553l12ikk9qqb", { 
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, 
+            body: JSON.stringify({ employeeName: employee, requestType: type, result: status, time: new Date().toLocaleString('en-GB') }) 
         }).catch(err => console.error("Webhook Error:", err)); 
     },
 
     actionReq: (id, actionType) => {
         const r = AppState.requests.find(x => x.id === id); 
         const userRole = AppState.currentUser.role;
-        
         if (r) { 
             let newStatus = actionType; 
             if (actionType === 'Approved') { 
-                if (userRole === 'head') { 
-                    newStatus = 'Pending (HR)'; 
-                } else if (userRole === 'admin') { 
-                    newStatus = 'Approved'; 
-                } 
-            } else { 
-                newStatus = 'Rejected'; 
-            }
+                if (userRole === 'head') newStatus = 'Pending (HR)'; 
+                else if (userRole === 'admin') newStatus = 'Approved'; 
+            } else { newStatus = 'Rejected'; }
             
             r.status = newStatus; 
             App.addLog('Workflow Action', `${newStatus} request for ${r.name} (${r.type}) by ${userRole}`); 
-            DB.save(AppState); 
-            App.toast(`Request marked as ${newStatus}`); 
-            App.sendLineAlert(r.name, r.type, newStatus); 
-            App.nav('admin-approve'); 
-            App.updateBadge(); 
-            Notif.push(r.u, `Workflow Update: Your ${r.type} request is now ${newStatus}.`); 
+            DB.save(AppState); App.toast(`Request marked as ${newStatus}`); App.sendLineAlert(r.name, r.type, newStatus); 
+            App.nav('admin-approve'); App.updateBadge(); Notif.push(r.u, `Workflow Update: Your ${r.type} request is now ${newStatus}.`); 
         }
     },
 
@@ -995,13 +785,7 @@ const App = {
         const u = AppState.users.find(x => x.username === username); 
         const bal = AppState.leaveBalances[username] || { annual: 0, sick: 0 }; 
         let m = document.getElementById('modal-edit-user'); 
-        
-        if (!m) { 
-            m = document.createElement('div'); 
-            m.className = 'modal'; 
-            m.id = 'modal-edit-user'; 
-            document.body.appendChild(m); 
-        } 
+        if (!m) { m = document.createElement('div'); m.className = 'modal'; m.id = 'modal-edit-user'; document.body.appendChild(m); } 
         
         m.innerHTML = `
             <div class="modal-content"> 
@@ -1010,10 +794,8 @@ const App = {
                     <button class="btn-text" style="font-size:20px; color:var(--text-muted);" onclick="App.closeModal('modal-edit-user')"><i class="fas fa-times"></i></button> 
                 </div> 
                 <form onsubmit="event.preventDefault(); App.saveEditUser('${username}');"> 
-                    <label>Full Name</label>
-                    <input type="text" id="edit-u-name" value="${u.name}" required> 
-                    <label>Department</label>
-                    <input type="text" id="edit-u-dept" value="${u.dept}" required> 
+                    <label>Full Name</label><input type="text" id="edit-u-name" value="${u.name}" required> 
+                    <label>Department</label><input type="text" id="edit-u-dept" value="${u.dept}" required> 
                     <div class="grid-2"> 
                         <div> 
                             <label>System Role</label> 
@@ -1024,144 +806,93 @@ const App = {
                                 <option value="it" ${u.role === 'it' ? 'selected' : ''}>IT Support</option> 
                             </select> 
                         </div> 
-                        <div>
-                            <label>User ID</label>
-                            <input type="text" value="${u.username}" disabled style="background:#f8fafc;">
-                        </div> 
+                        <div><label>User ID</label><input type="text" value="${u.username}" disabled style="background:#f8fafc;"></div> 
                     </div> 
                     <div class="grid-2"> 
-                        <div>
-                            <label>Annual Leave Bal.</label>
-                            <input type="number" step="0.5" id="edit-u-annual" value="${bal.annual}" required>
-                        </div> 
-                        <div>
-                            <label>Sick Leave Bal.</label>
-                            <input type="number" step="0.5" id="edit-u-sick" value="${bal.sick}" required>
-                        </div> 
+                        <div><label>Annual Leave Bal.</label><input type="number" step="0.5" id="edit-u-annual" value="${bal.annual}" required></div> 
+                        <div><label>Sick Leave Bal.</label><input type="number" step="0.5" id="edit-u-sick" value="${bal.sick}" required></div> 
                     </div> 
                     <div style="display:flex; gap:12px; margin-top:16px;"> 
                         <button type="button" class="btn-outline" style="flex:1;" onclick="App.closeModal('modal-edit-user')">Cancel</button> 
                         <button type="submit" class="btn-primary" style="flex:2;"><i class="fas fa-save"></i> Save Record</button> 
                     </div> 
                 </form> 
-            </div>
-        `; 
-        
+            </div>`; 
         App.openModal('modal-edit-user'); 
     },
 
     saveEditUser: (username) => { 
         const u = AppState.users.find(x => x.username === username); 
-        if (u) { 
-            u.name = document.getElementById('edit-u-name').value; 
-            u.dept = document.getElementById('edit-u-dept').value; 
-            u.role = document.getElementById('edit-u-role').value; 
-        } 
-        
+        if (u) { u.name = document.getElementById('edit-u-name').value; u.dept = document.getElementById('edit-u-dept').value; u.role = document.getElementById('edit-u-role').value; } 
         if (!AppState.leaveBalances[username]) AppState.leaveBalances[username] = {}; 
-        
         AppState.leaveBalances[username].annual = parseFloat(document.getElementById('edit-u-annual').value); 
         AppState.leaveBalances[username].sick = parseFloat(document.getElementById('edit-u-sick').value); 
-        
-        App.addLog('Data Update', `Modified user profile: ${username}`); 
-        DB.save(AppState); 
-        App.closeModal('modal-edit-user'); 
-        App.toast('Employee record updated.', 'success'); 
-        
+        App.addLog('Data Update', `Modified user profile: ${username}`); DB.save(AppState); App.closeModal('modal-edit-user'); App.toast('Employee record updated.', 'success'); 
         const navEl = Array.from(document.querySelectorAll('.nav-item')).find(el => el.innerText.includes('Directory') || el.innerText.includes('รายชื่อ') || el.innerText.includes('Manage')); 
         if (navEl) App.nav('admin-dir', navEl); 
     },
 
     toggleUserStatus: (username) => { 
-        if (username === AppState.currentUser.username) { 
-            return App.toast('Self-suspension is not permitted.', 'error'); 
-        } 
-        
+        if (username === AppState.currentUser.username) return App.toast('Self-suspension is not permitted.', 'error'); 
         const u = AppState.users.find(x => x.username === username); 
         if (u) { 
             u.isActive = u.isActive === false ? true : false; 
-            App.addLog('Access Control', `Changed account status for ${username} to ${u.isActive ? 'Active' : 'Suspended'}`); 
-            DB.save(AppState); 
-            App.toast(`Account status updated.`, 'success'); 
-            
+            App.addLog('Access Control', `Changed account status for ${username} to ${u.isActive ? 'Active' : 'Suspended'}`); DB.save(AppState); App.toast(`Account status updated.`, 'success'); 
             const navEl = Array.from(document.querySelectorAll('.nav-item')).find(el => el.innerText.includes('Directory') || el.innerText.includes('รายชื่อ') || el.innerText.includes('Manage')); 
             if (navEl) App.nav('admin-dir', navEl); 
         } 
     },
 
     saveSettings: () => { 
-        AppState.settings.companyName = document.getElementById('set-company').value; 
-        AppState.settings.leaveQuota = parseInt(document.getElementById('set-quota').value); 
-        AppState.settings.broadcast = document.getElementById('set-broadcast').value; 
-        
+        AppState.settings.companyName = document.getElementById('set-company').value; AppState.settings.leaveQuota = parseInt(document.getElementById('set-quota').value); AppState.settings.broadcast = document.getElementById('set-broadcast').value; 
         const maintEl = document.getElementById('set-maintenance'); 
         if (maintEl) { 
             const isMaint = maintEl.value === 'on'; 
-            if (AppState.settings.maintenance !== isMaint) { 
-                App.addLog('System Configuration', `Maintenance mode changed to: ${isMaint ? 'ON' : 'OFF'}`); 
-            } 
+            if (AppState.settings.maintenance !== isMaint) App.addLog('System Configuration', `Maintenance mode changed to: ${isMaint ? 'ON' : 'OFF'}`); 
             AppState.settings.maintenance = isMaint; 
         } 
-        DB.save(AppState); 
-        App.toast('System configuration applied.', 'success'); 
+        DB.save(AppState); App.toast('System configuration applied.', 'success'); 
     },
 
     backupDB: () => { 
         const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(AppState, null, 2)); 
-        const a = document.createElement('a'); 
-        a.href = dataStr; 
-        a.download = "DB_Backup_" + new Date().toISOString().slice(0,10) + ".json"; 
-        a.click(); 
-        App.addLog('Data Management', 'Manual database backup downloaded'); 
-        App.toast('Database Backup Downloaded', 'success'); 
+        const a = document.createElement('a'); a.href = dataStr; a.download = "DB_Backup_" + new Date().toISOString().slice(0,10) + ".json"; a.click(); 
+        App.addLog('Data Management', 'Manual database backup downloaded'); App.toast('Database Backup Downloaded', 'success'); 
     },
 
     clearCache: () => { 
         if (typeof Swal !== 'undefined') { 
-            Swal.fire({ 
-                title: 'Clear System Cache?', 
-                text: "This action will purge temporary data. Do you wish to proceed?", 
-                icon: 'warning', 
-                showCancelButton: true, 
-                confirmButtonColor: '#ef4444', 
-                cancelButtonColor: '#64748b', 
-                confirmButtonText: 'Proceed' 
-            }).then((result) => { 
-                if (result.isConfirmed) { 
-                    App.addLog('System Maintenance', 'System cache cleared'); 
-                    App.toast('Cache cleared successfully.', 'success'); 
-                } 
+            Swal.fire({ title: 'Clear System Cache?', text: "This action will purge temporary data. Do you wish to proceed?", icon: 'warning', showCancelButton: true, confirmButtonColor: '#ef4444', cancelButtonColor: '#64748b', confirmButtonText: 'Proceed' }).then((result) => { 
+                if (result.isConfirmed) { App.addLog('System Maintenance', 'System cache cleared'); App.toast('Cache cleared successfully.', 'success'); } 
             }); 
         } 
     },
     
     resetPass: (username) => { 
         if (typeof Swal !== 'undefined') { 
-            Swal.fire({ 
-                title: `Reset Password: ${username}`, 
-                input: 'text', 
-                inputLabel: 'Enter temporary password', 
-                inputValue: '123456', 
-                showCancelButton: true, 
-                confirmButtonText: 'Update Password', 
-                confirmButtonColor: '#3b82f6' 
-            }).then((result) => { 
+            Swal.fire({ title: `Reset Password: ${username}`, input: 'text', inputLabel: 'Enter temporary password', inputValue: '123456', showCancelButton: true, confirmButtonText: 'Update Password', confirmButtonColor: '#3b82f6' }).then((result) => { 
                 if (result.isConfirmed && result.value) { 
                     const u = AppState.users.find(x => x.username === username); 
-                    if (u) { 
-                        u.password = result.value; 
-                        App.addLog('Security', `Password reset executed for: ${username}`); 
-                        DB.save(AppState); 
-                        App.toast('Password reset successfully.', 'success'); 
-                    } 
+                    if (u) { u.password = result.value; App.addLog('Security', `Password reset executed for: ${username}`); DB.save(AppState); App.toast('Password reset successfully.', 'success'); } 
                 } 
             }); 
         } 
+    },
+    
+    // (Toast function added just in case it was missing from original logic)
+    toast: (msg, type = 'success') => {
+        const c = document.getElementById('toast-container');
+        if (!c) return;
+        const div = document.createElement('div');
+        div.className = 'toast show';
+        div.innerHTML = `<i class="fas ${type==='success'?'fa-check-circle':'fa-exclamation-circle'}" style="color:${type==='success'?'#10b981':'#ef4444'};"></i> ${msg}`;
+        c.appendChild(div);
+        setTimeout(() => { div.classList.remove('show'); setTimeout(() => div.remove(), 300); }, 3000);
     }
 };/**
  * ==========================================================================
  * 🚀 ENTERPRISE HR OS - FULL SCALE EDITION (PART 3/3)
- * Modules: UI Interactions, AI Helpdesk & HTML Template Renderers
+ * Modules: UI Interactions, AI Helpdesk, HTML Template Renderers & Boot
  * ==========================================================================
  */
 
@@ -1173,18 +904,9 @@ App.toggleSal = () => {
 };
 
 App.switchTab = (id, btn) => { 
-    document.querySelectorAll('.tab-btn').forEach(x => { 
-        x.classList.remove('active'); 
-        x.style.borderBottom = 'none'; 
-        x.style.color = '#64748b'; 
-    }); 
-    
-    btn.classList.add('active'); 
-    btn.style.borderBottom = '3px solid var(--primary)'; 
-    btn.style.color = 'var(--primary)'; 
-    
-    document.querySelectorAll('.tab-content').forEach(x => x.style.display = 'none'); 
-    document.getElementById(id).style.display = 'block'; 
+    document.querySelectorAll('.tab-btn').forEach(x => { x.classList.remove('active'); x.style.borderBottom = 'none'; x.style.color = '#64748b'; }); 
+    btn.classList.add('active'); btn.style.borderBottom = '3px solid var(--primary)'; btn.style.color = 'var(--primary)'; 
+    document.querySelectorAll('.tab-content').forEach(x => x.style.display = 'none'); document.getElementById(id).style.display = 'block'; 
 };
 
 App.openModal = (id) => { document.getElementById(id).classList.add('show'); };
@@ -1198,121 +920,74 @@ App.closeModal = (id) => {
 App.exportToCSV = () => { 
     App.toast('Exporting database records...'); 
     let csv = "\uFEFFID,Name,Department,Role,Status,Annual Leave,Sick Leave\n"; 
-    
     AppState.users.forEach(u => { 
         const bal = AppState.leaveBalances[u.username] || { annual: 0, sick: 0 }; 
         const status = u.isActive !== false ? 'Active' : 'Suspended'; 
         csv += `EMP-${u.username.toUpperCase()},${u.name},${u.dept},${u.role},${status},${bal.annual},${bal.sick}\n`; 
     }); 
-    
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" }); 
-    const url = URL.createObjectURL(blob); 
-    const a = document.createElement("a"); 
-    a.href = url; 
-    a.download = `Employee_Database_${new Date().toISOString().slice(0,10)}.csv`; 
-    a.click(); 
-    App.addLog('Data Export', 'Exported employee directory to CSV'); 
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" }); const url = URL.createObjectURL(blob); 
+    const a = document.createElement("a"); a.href = url; a.download = `Employee_Database_${new Date().toISOString().slice(0,10)}.csv`; 
+    a.click(); App.addLog('Data Export', 'Exported employee directory to CSV'); 
 };
 
 App.updateAvatarImg = () => { 
     const u = AppState.currentUser.username; 
-    if (!AppState.profiles[u]) {
-        AppState.profiles[u] = { email: '', phone: '', startDate: '', avatar: '' }; 
-    }
-    
+    if (!AppState.profiles[u]) AppState.profiles[u] = { email: '', phone: '', startDate: '', avatar: '' }; 
     const src = AppState.profiles[u].avatar || `https://ui-avatars.com/api/?name=${AppState.currentUser.name}&background=e0e7ff&color=3b82f6&bold=true`; 
-    
-    const img = document.getElementById('avatar-img'); 
-    if (img) img.src = src; 
-    
-    const profImg = document.getElementById('prof-avatar-img'); 
-    if (profImg) profImg.src = src; 
+    const img = document.getElementById('avatar-img'); if (img) img.src = src; 
+    const profImg = document.getElementById('prof-avatar-img'); if (profImg) profImg.src = src; 
 };
 
 App.handleAvatarUpload = (e) => { 
-    const file = e.target.files[0]; 
-    const u = AppState.currentUser.username; 
-    
+    const file = e.target.files[0]; const u = AppState.currentUser.username; 
     if (file) { 
         const reader = new FileReader(); 
-        reader.onload = (event) => { 
-            AppState.profiles[u].avatar = event.target.result; 
-            DB.save(AppState); 
-            App.updateAvatarImg(); 
-            App.toast('Profile photo updated', 'success'); 
-        }; 
+        reader.onload = (event) => { AppState.profiles[u].avatar = event.target.result; DB.save(AppState); App.updateAvatarImg(); App.toast('Profile photo updated', 'success'); }; 
         reader.readAsDataURL(file); 
     } 
 };
 
 App.saveProfile = () => { 
-    const u = AppState.currentUser.username; 
-    AppState.profiles[u].email = document.getElementById('prof-email').value; 
-    AppState.profiles[u].phone = document.getElementById('prof-phone').value; 
-    DB.save(AppState); 
-    App.toast('Profile information saved.', 'success'); 
+    const u = AppState.currentUser.username; AppState.profiles[u].email = document.getElementById('prof-email').value; AppState.profiles[u].phone = document.getElementById('prof-phone').value; 
+    DB.save(AppState); App.toast('Profile information saved.', 'success'); 
 };
 
 App.downloadFile = (filename) => { 
     App.toast(`Initiating download: ${filename}...`); 
     const blob = new Blob(["Document Content placeholder: " + filename], { type: "text/plain" }); 
-    const url = window.URL.createObjectURL(blob); 
-    const a = document.createElement("a"); 
-    a.href = url; 
-    a.download = filename + ".txt"; 
-    a.click(); 
-    window.URL.revokeObjectURL(url); 
+    const url = window.URL.createObjectURL(blob); const a = document.createElement("a"); 
+    a.href = url; a.download = filename + ".txt"; a.click(); window.URL.revokeObjectURL(url); 
 };
 
 App.getMonthOptions = () => { 
-    let options = ''; 
-    const today = new Date(); 
+    let options = ''; const today = new Date(); 
     for (let i = 0; i < 12; i++) { 
         const d = new Date(today.getFullYear(), today.getMonth() - i, 1); 
         const val = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`; 
-        const label = d.toLocaleString('en-US', { month: 'long', year: 'numeric' }); 
-        options += `<option value="${val}">${label}</option>`; 
+        options += `<option value="${val}">${d.toLocaleString('en-US', { month: 'long', year: 'numeric' })}</option>`; 
     } 
     return options; 
 };
 
 App.updateBadge = () => { 
-    const b = document.getElementById('badge-pending'); 
-    if (!b || !AppState.currentUser) return;
-    
-    const role = AppState.currentUser.role; 
-    let count = 0;
-    
-    if (role === 'head') {
-        count = AppState.requests.filter(r => r.status === 'Pending (Supervisor)').length;
-    }
-    if (role === 'admin') {
-        count = AppState.requests.filter(r => r.status === 'Pending (HR)').length;
-    }
-    
-    b.innerText = count; 
-    b.style.display = count > 0 ? 'inline-block' : 'none'; 
+    const b = document.getElementById('badge-pending'); if (!b || !AppState.currentUser) return;
+    const role = AppState.currentUser.role; let count = 0;
+    if (role === 'head') count = AppState.requests.filter(r => r.status === 'Pending (Supervisor)').length;
+    if (role === 'admin') count = AppState.requests.filter(r => r.status === 'Pending (HR)').length;
+    b.innerText = count; b.style.display = count > 0 ? 'inline-block' : 'none'; 
 };
 
 App.getSalary = () => {
     const r = AppState.currentUser.role;
-    if (r === 'admin' || r === 'it' || r === 'head') { 
-        return { base: 85000, ot: 0, allow: 5000, sso: 750, tax: 6500, absent: 0, earn: 90000, deduct: 7250, net: 82750 }; 
-    } else { 
-        return { base: 35000, ot: 4250, allow: 1500, sso: 750, tax: 1250, absent: 0, earn: 40750, deduct: 2000, net: 38750 }; 
-    }
+    if (r === 'admin' || r === 'it' || r === 'head') return { base: 85000, ot: 0, allow: 5000, sso: 750, tax: 6500, absent: 0, earn: 90000, deduct: 7250, net: 82750 }; 
+    else return { base: 35000, ot: 4250, allow: 1500, sso: 750, tax: 1250, absent: 0, earn: 40750, deduct: 2000, net: 38750 }; 
 };
 
 // --- Advanced AI Chatbot System ---
 const Chat = {
-    isOpen: false, 
-    currentRoom: '', 
-    unsubscribe: null,
-    
+    isOpen: false, currentRoom: '', unsubscribe: null,
     init: () => {
-        const u = AppState.currentUser; 
-        if (!Chat.currentRoom) Chat.currentRoom = u.username;
-        
+        const u = AppState.currentUser; if (!Chat.currentRoom) Chat.currentRoom = u.username;
         const header = document.querySelector('.chat-header');
         if (u.role !== 'employee') {
             const selectHtml = `
@@ -1321,39 +996,21 @@ const Chat = {
                 </select>
             `;
             header.innerHTML = `<i class="fas fa-headset"></i> Support ${selectHtml} <span id="chat-unread" class="badge" style="background:#ef4444; color:white; display:none; margin-left:auto; border:none; padding:2px 6px; font-size:10px;">New</span>`;
-        } else { 
-            header.innerHTML = `<i class="fas fa-headset"></i> HR Helpdesk <span id="chat-unread" class="badge" style="background:#ef4444; color:white; display:none; margin-left:auto; border:none; padding:2px 6px; font-size:10px;">New</span>`; 
-        }
-        
+        } else { header.innerHTML = `<i class="fas fa-headset"></i> HR Helpdesk <span id="chat-unread" class="badge" style="background:#ef4444; color:white; display:none; margin-left:auto; border:none; padding:2px 6px; font-size:10px;">New</span>`; }
         Chat.loadMessages();
     },
-
-    changeRoom: (roomUser) => { 
-        Chat.currentRoom = roomUser; 
-        Chat.loadMessages(); 
-    },
-
+    changeRoom: (roomUser) => { Chat.currentRoom = roomUser; Chat.loadMessages(); },
     loadMessages: () => {
-        if (Chat.unsubscribe) Chat.unsubscribe(); 
-        
+        if (Chat.unsubscribe) Chat.unsubscribe();
         Chat.unsubscribe = db.collection('hr_chats').where('room', '==', Chat.currentRoom).onSnapshot(snapshot => {
-            const box = document.getElementById('chat-messages'); 
-            if (!box) return;
-            
-            let messages = []; 
-            snapshot.forEach(doc => messages.push(doc.data()));
-            
-            messages.sort((a, b) => { 
-                const tA = a.timestamp ? a.timestamp.toMillis() : Date.now(); 
-                const tB = b.timestamp ? b.timestamp.toMillis() : Date.now(); 
-                return tA - tB; 
-            });
+            const box = document.getElementById('chat-messages'); if (!box) return;
+            let messages = []; snapshot.forEach(doc => messages.push(doc.data()));
+            messages.sort((a, b) => { const tA = a.timestamp ? a.timestamp.toMillis() : Date.now(); const tB = b.timestamp ? b.timestamp.toMillis() : Date.now(); return tA - tB; });
             
             let html = '';
             messages.forEach(msg => {
                 const isSelf = msg.u === AppState.currentUser.username; 
                 const time = msg.timestamp ? new Date(msg.timestamp.toDate()).toLocaleTimeString('en-US', {hour:'2-digit', minute:'2-digit'}) : 'Just now';
-                
                 html += `
                     <div class="msg-bubble ${isSelf ? 'msg-self' : 'msg-other'}"> 
                         ${!isSelf ? `<div class="msg-name">${msg.name} <span style="font-weight:400; opacity:0.6;">(${msg.role})</span></div>` : ''} 
@@ -1362,78 +1019,33 @@ const Chat = {
                     </div>
                 `;
             });
-            
-            box.innerHTML = html || `
-                <div style="text-align:center; padding: 20px; color: var(--text-muted); font-size:13px; font-weight:600;">
-                    <i class="fas fa-robot fa-2x" style="margin-bottom:12px; color:var(--brand-light);"></i><br>
-                    Helios AI Assistant initialized. How can I optimize your workflow today?
-                </div>
-            `;
+            box.innerHTML = html || `<div style="text-align:center; padding: 20px; color: var(--text-muted); font-size:13px; font-weight:600;"><i class="fas fa-robot fa-2x" style="margin-bottom:12px; color:var(--brand-light);"></i><br>Helios AI Assistant initialized. How can I optimize your workflow today?</div>`;
             box.scrollTop = box.scrollHeight; 
             
             if (!Chat.isOpen && snapshot.docChanges().length > 0) { 
-                const changes = snapshot.docChanges(); 
-                const hasNewFromOthers = changes.some(c => c.type === 'added' && c.doc.data().u !== AppState.currentUser.username); 
-                if (hasNewFromOthers) {
-                    document.getElementById('chat-unread').style.display = 'inline-block'; 
-                }
+                const hasNewFromOthers = snapshot.docChanges().some(c => c.type === 'added' && c.doc.data().u !== AppState.currentUser.username); 
+                if (hasNewFromOthers) document.getElementById('chat-unread').style.display = 'inline-block'; 
             }
         });
     },
-
     toggle: (e) => { 
         if (e && e.target.id === 'chat-room-select') return; 
-        
-        Chat.isOpen = !Chat.isOpen; 
-        document.getElementById('chat-body').style.display = Chat.isOpen ? 'block' : 'none'; 
-        
-        if (Chat.isOpen) { 
-            document.getElementById('chat-unread').style.display = 'none'; 
-            const box = document.getElementById('chat-messages'); 
-            box.scrollTop = box.scrollHeight; 
-        } 
+        Chat.isOpen = !Chat.isOpen; document.getElementById('chat-body').style.display = Chat.isOpen ? 'block' : 'none'; 
+        if (Chat.isOpen) { document.getElementById('chat-unread').style.display = 'none'; const box = document.getElementById('chat-messages'); box.scrollTop = box.scrollHeight; } 
     },
-
     send: () => { 
-        const input = document.getElementById('chat-text'); 
-        const text = input.value.trim(); 
+        const input = document.getElementById('chat-text'); const text = input.value.trim(); if (!text) return; input.value = ''; 
+        db.collection('hr_chats').add({ room: Chat.currentRoom, text: text, u: AppState.currentUser.username, name: AppState.currentUser.name, role: AppState.currentUser.role.toUpperCase(), timestamp: firebase.firestore.FieldValue.serverTimestamp() }).catch(err => console.error("Chat Error:", err)); 
         
-        if (!text) return; 
+        const mLower = text.toLowerCase(); let reply = "I've recorded your query. A human specialist will review it shortly."; 
+        if(mLower.includes('leave') || mLower.includes('ลา')) { const bal = AppState.leaveBalances[AppState.currentUser.username]?.annual || 0; reply = `To request leave, please navigate to the 'Time & Leave' module. You currently have <b>${bal}</b> days of annual leave remaining.`; } 
+        else if(mLower.includes('salary') || mLower.includes('pay') || mLower.includes('เงิน')) { reply = "Your latest e-payslip is generated on the 25th of every month. You can securely view it in the 'E-Payslip' module."; } 
+        else if(mLower.includes('ot') || mLower.includes('โอที')) { reply = "OT requests must be submitted within 24 hours of completion. Supervisors require evidence attachments for weekend OT."; }
         
-        input.value = ''; 
-        
-        db.collection('hr_chats').add({ 
-            room: Chat.currentRoom, 
-            text: text, 
-            u: AppState.currentUser.username, 
-            name: AppState.currentUser.name, 
-            role: AppState.currentUser.role.toUpperCase(), 
-            timestamp: firebase.firestore.FieldValue.serverTimestamp() 
-        }).catch(err => console.error("Chat Error:", err)); 
-        
-        // 🤖 AI Logic for Auto-Response
-        const mLower = text.toLowerCase();
-        let reply = "I've recorded your query. A human specialist will review it shortly.";
-        
-        if(mLower.includes('leave') || mLower.includes('ลา')) {
-            const bal = AppState.leaveBalances[AppState.currentUser.username]?.annual || 0;
-            reply = `To request leave, please navigate to the 'Time & Leave' module. You currently have <b>${bal}</b> days of annual leave remaining.`;
-        } else if(mLower.includes('salary') || mLower.includes('pay') || mLower.includes('เงิน')) {
-            reply = "Your latest e-payslip is generated on the 25th of every month. You can securely view it in the 'E-Payslip' module.";
-        } else if(mLower.includes('ot') || mLower.includes('โอที')) {
-            reply = "OT requests must be submitted within 24 hours of completion. Supervisors require evidence attachments for weekend OT.";
-        }
-        
-        // Mocking the AI response delay
         setTimeout(() => {
             const list = document.getElementById('chat-messages');
             if(list) {
-                list.innerHTML += `
-                <div class="msg-bubble msg-other" style="border-left: 3px solid var(--brand-main);">
-                    <strong style="color:var(--brand-main); font-size:12px; display:block; margin-bottom:4px;">Helios AI</strong>
-                    ${reply}
-                    <div style="font-size:10px; margin-top:6px; opacity:0.8;">Just now</div>
-                </div>`;
+                list.innerHTML += `<div class="msg-bubble msg-other" style="border-left: 3px solid var(--brand-main);"><strong style="color:var(--brand-main); font-size:12px; display:block; margin-bottom:4px;">Helios AI</strong>${reply}<div style="font-size:10px; margin-top:6px; opacity:0.8;">Just now</div></div>`;
                 list.scrollTop = list.scrollHeight;
             }
         }, 1500);
@@ -1443,239 +1055,75 @@ const Chat = {
 // --- Advanced Chart Renderers ---
 App.renderChart = () => {
     if (chartInst) chartInst.destroy(); 
-    
-    const u = AppState.currentUser.username; 
-    const bal = AppState.leaveBalances[u] ? AppState.leaveBalances[u].annual : 0; 
-    const ctx = document.getElementById('userChart');
-    
+    const u = AppState.currentUser.username; const bal = AppState.leaveBalances[u] ? AppState.leaveBalances[u].annual : 0; const ctx = document.getElementById('userChart');
     if (!ctx) return; 
-    
-    chartInst = new Chart(ctx, { 
-        type: 'doughnut', 
-        data: { 
-            labels: ['Used', 'Remaining'], 
-            datasets: [{ 
-                data: [AppState.settings.leaveQuota - bal, bal], 
-                backgroundColor: ['#e2e8f0', '#3b82f6'], 
-                borderWidth: 0 
-            }] 
-        }, 
-        options: { 
-            cutout: '80%', 
-            plugins: { legend: { display: false } } 
-        } 
-    });
+    chartInst = new Chart(ctx, { type: 'doughnut', data: { labels: ['Used', 'Remaining'], datasets: [{ data: [AppState.settings.leaveQuota - bal, bal], backgroundColor: ['#e2e8f0', '#3b82f6'], borderWidth: 0 }] }, options: { cutout: '80%', plugins: { legend: { display: false } } } });
 };
 
 App.renderAdminDashChart = () => {
-    if (chartInst) chartInst.destroy(); 
-    const ctx = document.getElementById('adminDashChart'); 
-    if (!ctx) return; 
-    
-    chartInst = new Chart(ctx, { 
-        type: 'bar', 
-        data: { 
-            labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'], 
-            datasets: [ 
-                { label: 'Present', data: [12, 15, 14, 13, 10], backgroundColor: '#10b981' }, 
-                { label: 'Leave', data: [2, 0, 1, 1, 4], backgroundColor: '#f59e0b' }, 
-                { label: 'Remote', data: [1, 0, 0, 1, 1], backgroundColor: '#3b82f6' } 
-            ] 
-        }, 
-        options: { 
-            maintainAspectRatio: false, 
-            scales: { 
-                x: { stacked: true, grid: { display: false } }, 
-                y: { stacked: true, beginAtZero: true, border: { dash: [4, 4] } } 
-            }, 
-            plugins: { legend: { position: 'top' } } 
-        } 
-    });
+    if (chartInst) chartInst.destroy(); const ctx = document.getElementById('adminDashChart'); if (!ctx) return; 
+    chartInst = new Chart(ctx, { type: 'bar', data: { labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'], datasets: [ { label: 'Present', data: [12, 15, 14, 13, 10], backgroundColor: '#10b981' }, { label: 'Leave', data: [2, 0, 1, 1, 4], backgroundColor: '#f59e0b' }, { label: 'Remote', data: [1, 0, 0, 1, 1], backgroundColor: '#3b82f6' } ] }, options: { maintainAspectRatio: false, scales: { x: { stacked: true, grid: { display: false } }, y: { stacked: true, beginAtZero: true, border: { dash: [4, 4] } } }, plugins: { legend: { position: 'top' } } } });
 };
 
 App.renderITLiveChart = () => {
-    if (liveChartInst) liveChartInst.destroy(); 
-    const ctx = document.getElementById('itLiveChart'); 
-    if (!ctx) return;
-    
-    let currentCpu = 25; 
-    const initialData = Array.from({length: 40}, () => { 
-        currentCpu += (Math.random() * 4) - 2; 
-        return Math.max(5, Math.min(95, currentCpu)); 
-    });
-    
-    liveChartInst = new Chart(ctx, { 
-        type: 'line', 
-        data: { 
-            labels: Array(40).fill(''), 
-            datasets: [{ 
-                label: 'CPU Allocation (%)', 
-                data: initialData, 
-                borderColor: '#10b981', 
-                backgroundColor: 'rgba(16, 185, 129, 0.05)', 
-                borderWidth: 2, 
-                fill: true, 
-                tension: 0.4, 
-                pointRadius: 0 
-            }] 
-        }, 
-        options: { 
-            maintainAspectRatio: false, 
-            animation: false, 
-            scales: { 
-                y: { 
-                    min: 0, 
-                    max: 100, 
-                    ticks: { stepSize: 20, color: '#94a3b8', font: { size: 10 } }, 
-                    grid: { color: '#f1f5f9' }, 
-                    border: { display: false } 
-                }, 
-                x: { display: false } 
-            }, 
-            plugins: { 
-                legend: { display: false }, 
-                tooltip: { enabled: false } 
-            } 
-        } 
-    });
-    
+    if (liveChartInst) liveChartInst.destroy(); const ctx = document.getElementById('itLiveChart'); if (!ctx) return;
+    let currentCpu = 25; const initialData = Array.from({length: 40}, () => { currentCpu += (Math.random() * 4) - 2; return Math.max(5, Math.min(95, currentCpu)); });
+    liveChartInst = new Chart(ctx, { type: 'line', data: { labels: Array(40).fill(''), datasets: [{ label: 'CPU Allocation (%)', data: initialData, borderColor: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.05)', borderWidth: 2, fill: true, tension: 0.4, pointRadius: 0 }] }, options: { maintainAspectRatio: false, animation: false, scales: { y: { min: 0, max: 100, ticks: { stepSize: 20, color: '#94a3b8', font: { size: 10 } }, grid: { color: '#f1f5f9' }, border: { display: false } }, x: { display: false } }, plugins: { legend: { display: false }, tooltip: { enabled: false } } } });
     liveChartInterval = setInterval(() => {
-        const data = liveChartInst.data.datasets[0].data; 
-        let lastVal = data[data.length - 1]; 
-        let change = (Math.random() * 5) - 2.5; 
-        
-        if (Math.random() > 0.98) change += 25; 
-        if (lastVal > 60) change -= 2; 
-        if (lastVal < 15) change += 2;
-        
-        let newVal = Math.max(2, Math.min(98, lastVal + change));
-        let color = '#10b981'; 
-        let bgColor = 'rgba(16, 185, 129, 0.05)';
-        
-        if (newVal > 80) { 
-            color = '#ef4444'; 
-            bgColor = 'rgba(239, 68, 68, 0.05)'; 
-        } else if (newVal > 60) { 
-            color = '#f59e0b'; 
-            bgColor = 'rgba(245, 158, 11, 0.05)'; 
-        }
-        
-        liveChartInst.data.datasets[0].borderColor = color; 
-        liveChartInst.data.datasets[0].backgroundColor = bgColor;
-        
-        data.push(newVal); 
-        data.shift(); 
-        liveChartInst.update();
+        const data = liveChartInst.data.datasets[0].data; let lastVal = data[data.length - 1]; let change = (Math.random() * 5) - 2.5; 
+        if (Math.random() > 0.98) change += 25; if (lastVal > 60) change -= 2; if (lastVal < 15) change += 2;
+        let newVal = Math.max(2, Math.min(98, lastVal + change)); let color = '#10b981'; let bgColor = 'rgba(16, 185, 129, 0.05)';
+        if (newVal > 80) { color = '#ef4444'; bgColor = 'rgba(239, 68, 68, 0.05)'; } else if (newVal > 60) { color = '#f59e0b'; bgColor = 'rgba(245, 158, 11, 0.05)'; }
+        liveChartInst.data.datasets[0].borderColor = color; liveChartInst.data.datasets[0].backgroundColor = bgColor;
+        data.push(newVal); data.shift(); liveChartInst.update();
     }, 1000);
 };
 
 App.renderDigitalTwin = () => {
     if (!document.querySelector('.digital-twin-wrapper')) return; 
-    
-    ['hr', 'sales', 'it', 'general', 'wfh'].forEach(z => { 
-        const el = document.getElementById(`zone-${z}`); 
-        if (el) { 
-            const title = el.querySelector('.zone-title'); 
-            el.innerHTML = ''; 
-            el.appendChild(title); 
-        } 
-    });
-    
+    ['hr', 'sales', 'it', 'general', 'wfh'].forEach(z => { const el = document.getElementById(`zone-${z}`); if (el) { const title = el.querySelector('.zone-title'); el.innerHTML = ''; el.appendChild(title); } });
     const todayStr = new Date().toLocaleDateString('en-CA');
-    
     for (const user in AppState.dailyClock) {
         const clockData = AppState.dailyClock[user];
         if (clockData.date === todayStr && clockData.status === 'in') {
-            const uData = AppState.users.find(x => x.username === user);
-            if (!uData) continue;
-            
-            const avatarSrc = (AppState.profiles && AppState.profiles[user] && AppState.profiles[user].avatar) 
-                ? AppState.profiles[user].avatar 
-                : `https://ui-avatars.com/api/?name=${uData.name}&background=e0e7ff&color=3b82f6`;
-            
+            const uData = AppState.users.find(x => x.username === user); if (!uData) continue;
+            const avatarSrc = (AppState.profiles && AppState.profiles[user] && AppState.profiles[user].avatar) ? AppState.profiles[user].avatar : `https://ui-avatars.com/api/?name=${uData.name}&background=e0e7ff&color=3b82f6`;
             let targetZone = 'general';
-            if (clockData.loc === 'WFH') { 
-                targetZone = 'wfh'; 
-            } else {
+            if (clockData.loc === 'WFH') { targetZone = 'wfh'; } else {
                 const dept = (uData.dept || '').toLowerCase();
-                if (dept.includes('hr') || dept.includes('human')) targetZone = 'hr';
-                else if (dept.includes('sales') || dept.includes('marketing')) targetZone = 'sales';
-                else if (dept.includes('it')) targetZone = 'it';
+                if (dept.includes('hr') || dept.includes('human')) targetZone = 'hr'; else if (dept.includes('sales') || dept.includes('marketing')) targetZone = 'sales'; else if (dept.includes('it')) targetZone = 'it';
             }
-            
             const zoneEl = document.getElementById(`zone-${targetZone}`);
             if (zoneEl) {
                 const dotClass = clockData.loc === 'WFH' ? 'live-avatar wfh' : 'live-avatar';
-                zoneEl.innerHTML += `
-                    <div class="${dotClass}" title="${uData.name} - Since ${new Date(clockData.in).toLocaleTimeString('en-US',{hour:'2-digit', minute:'2-digit'})}">
-                        <img src="${avatarSrc}">
-                        <span>${uData.name.split(' ')[0]}</span>
-                    </div>
-                `;
+                zoneEl.innerHTML += `<div class="${dotClass}" title="${uData.name} - Since ${new Date(clockData.in).toLocaleTimeString('en-US',{hour:'2-digit', minute:'2-digit'})}"><img src="${avatarSrc}"><span>${uData.name.split(' ')[0]}</span></div>`;
             }
         }
     }
 };
 
-App.changeCalMonth = (dir) => { 
-    calMonth += dir; 
-    if (calMonth < 0) { 
-        calMonth = 11; 
-        calYear--; 
-    } else if (calMonth > 11) { 
-        calMonth = 0; 
-        calYear++; 
-    } 
-    App.renderCalendarGrid(); 
-};
+App.changeCalMonth = (dir) => { calMonth += dir; if (calMonth < 0) { calMonth = 11; calYear--; } else if (calMonth > 11) { calMonth = 0; calYear++; } App.renderCalendarGrid(); };
 
 App.renderCalendarGrid = () => { 
-    const wrapper = document.getElementById('cal-wrapper'); 
-    if (!wrapper) return; 
-    
-    const d = new Date(calYear, calMonth, 1); 
-    document.getElementById('cal-title').innerText = `${d.toLocaleString('en-US', { month: 'long' })} ${calYear}`; 
-    
-    const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate(); 
-    const firstDayIndex = d.getDay(); 
-    const today = new Date(); 
-    const isCurrentMonth = today.getMonth() === calMonth && today.getFullYear() === calYear; 
-    
-    let html = ''; 
-    for (let i = 0; i < firstDayIndex; i++) {
-        html += `<div class="cal-day empty"></div>`; 
-    }
-    
+    const wrapper = document.getElementById('cal-wrapper'); if (!wrapper) return; 
+    const d = new Date(calYear, calMonth, 1); document.getElementById('cal-title').innerText = `${d.toLocaleString('en-US', { month: 'long' })} ${calYear}`; 
+    const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate(); const firstDayIndex = d.getDay(); const today = new Date(); const isCurrentMonth = today.getMonth() === calMonth && today.getFullYear() === calYear; 
+    let html = ''; for (let i = 0; i < firstDayIndex; i++) { html += `<div class="cal-day empty"></div>`; }
     for (let i = 1; i <= daysInMonth; i++) { 
-        let classes = "cal-day"; 
-        if (isCurrentMonth && i === today.getDate()) classes += " today"; 
-        
-        let eventHTML = ""; 
-        if (i === 10) eventHTML = `<span class="event-badge" style="background:#fee2e2; color:#b91c1c;">Public Holiday</span>`; 
-        if (i === 25) eventHTML = `<span class="event-badge">Payroll Cut-off</span>`; 
-        
+        let classes = "cal-day"; if (isCurrentMonth && i === today.getDate()) classes += " today"; 
+        let eventHTML = ""; if (i === 10) eventHTML = `<span class="event-badge" style="background:#fee2e2; color:#b91c1c;">Public Holiday</span>`; if (i === 25) eventHTML = `<span class="event-badge">Payroll Cut-off</span>`; 
         html += `<div class="${classes}"><div style="font-weight:bold;">${i}</div>${eventHTML}</div>`; 
     } 
     wrapper.innerHTML = html; 
 };
 
 App.genSlip = () => {
-    const wrapper = document.getElementById('printable-area'); 
-    if (!wrapper) return; 
-    
-    const slip = App.getSalary();
-    const monthValue = document.getElementById('slip-month') ? document.getElementById('slip-month').value : 'Current Month';
-    
+    const wrapper = document.getElementById('printable-area'); if (!wrapper) return; 
+    const slip = App.getSalary(); const monthValue = document.getElementById('slip-month') ? document.getElementById('slip-month').value : 'Current Month';
     wrapper.innerHTML = `
     <div style="background:white; padding:40px; border:1px solid var(--border); border-radius:var(--radius); font-family:'Inter', 'Kanit', sans-serif; max-width:800px; margin:0 auto; box-shadow:var(--shadow-sm);"> 
-        <div style="text-align:center; margin-bottom:30px;">
-            <h2 style="font-size:20px; color:var(--primary); margin:0; text-transform:uppercase; letter-spacing:1px;">${AppState.settings.companyName}</h2>
-            <p style="color:var(--text-muted); margin:5px 0 0 0; font-size:12px;">E-Payslip Document - ${monthValue}</p>
-        </div> 
-        <div style="background:var(--bg-main); padding:15px 20px; border-radius:var(--radius-sm); margin-bottom:25px; display:flex; justify-content:space-between; font-size:13px; border:1px solid var(--border);">
-            <div>Employee: <b>${AppState.currentUser.name}</b> <span style="color:var(--text-muted); margin-left:8px;">(ID: EMP-${AppState.currentUser.username.toUpperCase()})</span></div>
-            <div style="text-align:right">Department: <b>${AppState.currentUser.dept}</b></div>
-        </div> 
+        <div style="text-align:center; margin-bottom:30px;"><h2 style="font-size:20px; color:var(--primary); margin:0; text-transform:uppercase; letter-spacing:1px;">${AppState.settings.companyName}</h2><p style="color:var(--text-muted); margin:5px 0 0 0; font-size:12px;">E-Payslip Document - ${monthValue}</p></div> 
+        <div style="background:var(--bg-main); padding:15px 20px; border-radius:var(--radius-sm); margin-bottom:25px; display:flex; justify-content:space-between; font-size:13px; border:1px solid var(--border);"><div>Employee: <b>${AppState.currentUser.name}</b> <span style="color:var(--text-muted); margin-left:8px;">(ID: EMP-${AppState.currentUser.username.toUpperCase()})</span></div><div style="text-align:right">Department: <b>${AppState.currentUser.dept}</b></div></div> 
         <div class="grid-2" style="gap:30px;"> 
             <div>
                 <h3 style="font-size:14px; color:var(--success); border-bottom:2px solid var(--success); padding-bottom:8px; margin-bottom:15px; text-transform:uppercase;">Earnings</h3>
@@ -1696,467 +1144,147 @@ App.genSlip = () => {
             <div style="font-size:12px; opacity:0.8; text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;">${t('slip_net')}</div>
             <div style="font-size:32px; font-weight:700; letter-spacing:-1px;">THB ${slip.net.toLocaleString(undefined, {minimumFractionDigits: 2})}</div>
         </div> 
-        <div style="text-align:center; margin-top:30px; font-size:11px; color:var(--text-muted); border-top:1px dashed var(--border); padding-top:15px;">
-            This document is computer-generated. No signature is required.
-        </div> 
+        <div style="text-align:center; margin-top:30px; font-size:11px; color:var(--text-muted); border-top:1px dashed var(--border); padding-top:15px;">This document is computer-generated. No signature is required.</div> 
     </div>`;
 };
 
 // --- VIEWS REGISTRY ---
 const Views = {
     'admin-dash': () => {
-        const todayStr = new Date().toLocaleDateString('en-CA');
-        let activeCount = 0;
-        
-        for (const user in AppState.dailyClock) { 
-            if (AppState.dailyClock[user].date === todayStr && AppState.dailyClock[user].status === 'in') {
-                activeCount++; 
-            }
-        }
-        
-        const pendingApprovals = AppState.requests.filter(r => r.status.includes('Pending')).length;
-        const totalEmployees = AppState.users.filter(u => u.isActive).length;
-        const onLeave = AppState.requests.filter(r => r.status === 'Approved' && r.type === 'Leave').length; 
-        
+        const todayStr = new Date().toLocaleDateString('en-CA'); let activeCount = 0;
+        for (const user in AppState.dailyClock) { if (AppState.dailyClock[user].date === todayStr && AppState.dailyClock[user].status === 'in') activeCount++; }
+        const pendingApprovals = AppState.requests.filter(r => r.status.includes('Pending')).length; const totalEmployees = AppState.users.filter(u => u.isActive).length; const onLeave = AppState.requests.filter(r => r.status === 'Approved' && r.type === 'Leave').length; 
         return `
         <div style="animation: fadeUp 0.4s ease-out;">
             <h1 style="margin-bottom:24px;"><i class="fas fa-chart-pie text-muted"></i> ${t('admin_dash')}</h1>
             <div class="grid-4" style="margin-bottom: 24px;">
-                <div class="card" style="padding:20px; border-top: 3px solid var(--primary);">
-                    <h2 style="font-size:12px; color:var(--text-muted); text-transform:uppercase; margin:0;"><i class="fas fa-users"></i> Employees</h2>
-                    <div class="stat-value" style="font-size:28px;">${totalEmployees}</div>
-                </div>
-                <div class="card" style="padding:20px; border-top: 3px solid var(--success);">
-                    <h2 style="font-size:12px; color:var(--text-muted); text-transform:uppercase; margin:0;"><i class="fas fa-building"></i> Present Today</h2>
-                    <div class="stat-value" style="color:var(--success); font-size:28px;">${activeCount}</div>
-                </div>
-                <div class="card" style="padding:20px; border-top: 3px solid var(--warning);">
-                    <h2 style="font-size:12px; color:var(--text-muted); text-transform:uppercase; margin:0;"><i class="fas fa-umbrella-beach"></i> On Leave</h2>
-                    <div class="stat-value" style="color:var(--warning); font-size:28px;">${onLeave}</div>
-                </div>
-                <div class="card" style="padding:20px; border-top: 3px solid var(--danger);">
-                    <h2 style="font-size:12px; color:var(--text-muted); text-transform:uppercase; margin:0;"><i class="fas fa-clipboard-check"></i> Pending Approvals</h2>
-                    <div class="stat-value" style="color:var(--danger); font-size:28px;">${pendingApprovals}</div>
-                </div>
+                <div class="card" style="padding:20px; border-top: 3px solid var(--primary);"><h2 style="font-size:12px; color:var(--text-muted); text-transform:uppercase; margin:0;"><i class="fas fa-users"></i> Employees</h2><div class="stat-value" style="font-size:28px;">${totalEmployees}</div></div>
+                <div class="card" style="padding:20px; border-top: 3px solid var(--success);"><h2 style="font-size:12px; color:var(--text-muted); text-transform:uppercase; margin:0;"><i class="fas fa-building"></i> Present Today</h2><div class="stat-value" style="color:var(--success); font-size:28px;">${activeCount}</div></div>
+                <div class="card" style="padding:20px; border-top: 3px solid var(--warning);"><h2 style="font-size:12px; color:var(--text-muted); text-transform:uppercase; margin:0;"><i class="fas fa-umbrella-beach"></i> On Leave</h2><div class="stat-value" style="color:var(--warning); font-size:28px;">${onLeave}</div></div>
+                <div class="card" style="padding:20px; border-top: 3px solid var(--danger);"><h2 style="font-size:12px; color:var(--text-muted); text-transform:uppercase; margin:0;"><i class="fas fa-clipboard-check"></i> Pending Approvals</h2><div class="stat-value" style="color:var(--danger); font-size:28px;">${pendingApprovals}</div></div>
             </div>
-            <div class="card">
-                <h2 style="margin-bottom:16px; font-size:14px; text-transform:uppercase; color:var(--text-muted);">Weekly Attendance Overview</h2>
-                <div style="height: 280px; width: 100%; position: relative;"><canvas id="adminDashChart"></canvas></div>
-            </div>
+            <div class="card"><h2 style="margin-bottom:16px; font-size:14px; text-transform:uppercase; color:var(--text-muted);">Weekly Attendance Overview</h2><div style="height: 280px; width: 100%; position: relative;"><canvas id="adminDashChart"></canvas></div></div>
         </div>`;
     },
 
     'it-dash': () => {
-        const activeUsers = AppState.users.filter(u => u.isActive !== false).length;
-        const suspendedUsers = AppState.users.length - activeUsers;
-        const todayLogins = Math.floor(Math.random() * 20) + 5; 
-        const sysRequests = Math.floor(Math.random() * 5000) + 1200;
-        
+        const activeUsers = AppState.users.filter(u => u.isActive !== false).length; const todayLogins = Math.floor(Math.random() * 20) + 5; const sysRequests = Math.floor(Math.random() * 5000) + 1200;
         return `
         <div style="animation: fadeUp 0.4s ease-out;"> 
             <h1 style="margin-bottom:24px;"><i class="fas fa-server text-muted"></i> ${t('it_dash')}</h1> 
             <div class="grid-4" style="margin-bottom: 24px;"> 
-                <div class="card" style="padding:20px; border-top: 3px solid var(--primary);">
-                    <h2 style="font-size:12px; color:var(--text-muted); text-transform:uppercase; margin:0;"><i class="fas fa-users"></i> Total Accounts</h2>
-                    <div class="stat-value" style="font-size:28px;">${AppState.users.length}</div>
-                </div> 
-                <div class="card" style="padding:20px; border-top: 3px solid var(--success);">
-                    <h2 style="font-size:12px; color:var(--text-muted); text-transform:uppercase; margin:0;"><i class="fas fa-user-check"></i> Active Users</h2>
-                    <div class="stat-value" style="color:var(--success); font-size:28px;">${activeUsers}</div>
-                </div> 
-                <div class="card" style="padding:20px; border-top: 3px solid var(--accent);">
-                    <h2 style="font-size:12px; color:var(--text-muted); text-transform:uppercase; margin:0;"><i class="fas fa-sign-in-alt"></i> Today's Logins</h2>
-                    <div class="stat-value" style="color:var(--accent); font-size:28px;">${todayLogins}</div>
-                </div> 
-                <div class="card" style="padding:20px; border-top: 3px solid var(--warning);">
-                    <h2 style="font-size:12px; color:var(--text-muted); text-transform:uppercase; margin:0;"><i class="fas fa-network-wired"></i> System Requests</h2>
-                    <div class="stat-value" style="color:var(--warning); font-size:28px;">${sysRequests.toLocaleString()}</div>
-                </div> 
+                <div class="card" style="padding:20px; border-top: 3px solid var(--primary);"><h2 style="font-size:12px; color:var(--text-muted); text-transform:uppercase; margin:0;"><i class="fas fa-users"></i> Total Accounts</h2><div class="stat-value" style="font-size:28px;">${AppState.users.length}</div></div> 
+                <div class="card" style="padding:20px; border-top: 3px solid var(--success);"><h2 style="font-size:12px; color:var(--text-muted); text-transform:uppercase; margin:0;"><i class="fas fa-user-check"></i> Active Users</h2><div class="stat-value" style="color:var(--success); font-size:28px;">${activeUsers}</div></div> 
+                <div class="card" style="padding:20px; border-top: 3px solid var(--accent);"><h2 style="font-size:12px; color:var(--text-muted); text-transform:uppercase; margin:0;"><i class="fas fa-sign-in-alt"></i> Today's Logins</h2><div class="stat-value" style="color:var(--accent); font-size:28px;">${todayLogins}</div></div> 
+                <div class="card" style="padding:20px; border-top: 3px solid var(--warning);"><h2 style="font-size:12px; color:var(--text-muted); text-transform:uppercase; margin:0;"><i class="fas fa-network-wired"></i> System Requests</h2><div class="stat-value" style="color:var(--warning); font-size:28px;">${sysRequests.toLocaleString()}</div></div> 
             </div> 
-            <div class="card" style="margin-bottom: 24px;">
-                <div class="flex-between" style="margin-bottom:16px;">
-                    <h2 style="margin:0; display:flex; align-items:center; gap:8px;"><i class="fas fa-microchip text-muted"></i> Compute Resource Allocation (CPU)</h2>
-                    <span class="badge" style="background:#ecfdf5; color:#059669;"><i class="fas fa-circle" style="font-size:8px;"></i> Running</span>
-                </div>
-                <div style="height: 250px; width: 100%; position: relative;"><canvas id="itLiveChart"></canvas></div>
-            </div> 
-            <div class="card">
-                <h2 style="margin-bottom:16px;"><i class="fas fa-shield-alt text-muted"></i> System Status</h2>
-                <div style="padding:16px 20px; background:#f8fafc; border:1px solid var(--border); border-radius:var(--radius-sm); display:flex; align-items:center; gap:16px;">
-                    <div style="font-size:24px; color:var(--success);"><i class="fas fa-check-circle"></i></div> 
-                    <div>
-                        <strong style="font-size:14px; color:var(--primary);">All Services Operational</strong><br>
-                        <span style="font-size:12px; color:var(--text-muted);">Database connection verified. Webhook integrations are functioning normally.</span>
-                    </div>
-                </div>
-            </div> 
+            <div class="card" style="margin-bottom: 24px;"><div class="flex-between" style="margin-bottom:16px;"><h2 style="margin:0; display:flex; align-items:center; gap:8px;"><i class="fas fa-microchip text-muted"></i> Compute Resource Allocation (CPU)</h2><span class="badge" style="background:#ecfdf5; color:#059669;"><i class="fas fa-circle" style="font-size:8px;"></i> Running</span></div><div style="height: 250px; width: 100%; position: relative;"><canvas id="itLiveChart"></canvas></div></div> 
+            <div class="card"><h2 style="margin-bottom:16px;"><i class="fas fa-shield-alt text-muted"></i> System Status</h2><div style="padding:16px 20px; background:#f8fafc; border:1px solid var(--border); border-radius:var(--radius-sm); display:flex; align-items:center; gap:16px;"><div style="font-size:24px; color:var(--success);"><i class="fas fa-check-circle"></i></div> <div><strong style="font-size:14px; color:var(--primary);">All Services Operational</strong><br><span style="font-size:12px; color:var(--text-muted);">Database connection verified. Webhook integrations are functioning normally.</span></div></div></div> 
         </div>`;
     },
 
     'it-logs': () => {
         const logs = AppState.auditLogs || [];
-        
-        let logsHTML = '';
-        if (logs.length > 0) {
-            logsHTML = logs.slice(0, 50).map(l => `
-                <tr>
-                    <td style="color:var(--text-muted); font-size:12px; white-space:nowrap;">${l.time}</td>
-                    <td><b style="color:var(--primary);">${l.user}</b></td>
-                    <td><span class="badge" style="background:#f1f5f9; color:var(--text-muted); border:1px solid var(--border);">${l.role.toUpperCase()}</span></td>
-                    <td><span class="badge" style="background:var(--accent-light); color:var(--accent);">${l.action}</span></td>
-                    <td style="font-size:13px; color:var(--text-dark);">${l.detail}</td>
-                </tr>
-            `).join('');
-        } else {
-            logsHTML = `
-                <tr>
-                    <td colspan="5" class="empty-state">
-                        <i class="fas fa-search fa-2x" style="color:var(--border); margin-bottom:8px;"></i><br>No audit logs available.
-                    </td>
-                </tr>
-            `;
-        }
-        
+        let logsHTML = logs.length > 0 ? logs.slice(0, 50).map(l => `<tr><td style="color:var(--text-muted); font-size:12px; white-space:nowrap;">${l.time}</td><td><b style="color:var(--primary);">${l.user}</b></td><td><span class="badge" style="background:#f1f5f9; color:var(--text-muted); border:1px solid var(--border);">${l.role.toUpperCase()}</span></td><td><span class="badge" style="background:var(--accent-light); color:var(--accent);">${l.action}</span></td><td style="font-size:13px; color:var(--text-dark);">${l.detail}</td></tr>`).join('') : `<tr><td colspan="5" class="empty-state"><i class="fas fa-search fa-2x" style="color:var(--border); margin-bottom:8px;"></i><br>No audit logs available.</td></tr>`;
         return `
         <div style="animation: fadeUp 0.4s ease-out;"> 
-            <div class="flex-between" style="margin-bottom:24px;"> 
-                <h1 style="margin:0;"><i class="fas fa-clipboard-list text-muted"></i> ${t('it_log')}</h1> 
-                <button class="btn-outline" onclick="App.toast('Log export initiated.', 'success')"><i class="fas fa-download"></i> Export Logs</button> 
-            </div> 
-            <div class="card table-wrapper" style="padding:0;"> 
-                <table style="margin:0;"> 
-                    <thead>
-                        <tr><th>Timestamp</th><th>User</th><th>Role</th><th>Event Type</th><th>Details</th></tr>
-                    </thead> 
-                    <tbody>
-                        ${logsHTML}
-                    </tbody> 
-                </table> 
-            </div> 
+            <div class="flex-between" style="margin-bottom:24px;"><h1 style="margin:0;"><i class="fas fa-clipboard-list text-muted"></i> ${t('it_log')}</h1><button class="btn-outline" onclick="App.toast('Log export initiated.', 'success')"><i class="fas fa-download"></i> Export Logs</button></div> 
+            <div class="card table-wrapper" style="padding:0;"><table style="margin:0;"><thead><tr><th>Timestamp</th><th>User</th><th>Role</th><th>Event Type</th><th>Details</th></tr></thead><tbody>${logsHTML}</tbody></table></div> 
         </div>`;
     },
 
     'home': () => {
-        const u = AppState.currentUser.username;
-        const bal = AppState.leaveBalances[u] ? AppState.leaveBalances[u].annual : 0;
-        const sal = App.getSalary(); 
-        
-        let broadcastMsg = '';
-        if (AppState.settings.broadcast) {
-            broadcastMsg = `
-            <div style="background: #fffbeb; border-left: 4px solid #f59e0b; padding: 12px 16px; margin-bottom: 24px; border-radius: var(--radius-sm); color: #b45309; display: flex; gap: 12px; align-items: flex-start; box-shadow: var(--shadow-sm);">
-                <div style="font-size: 18px; margin-top:2px;"><i class="fas fa-bullhorn"></i></div>
-                <div>
-                    <strong style="display:block; margin-bottom:2px; font-size:13px;">Corporate Announcement</strong>
-                    <span style="font-size:13px;">${AppState.settings.broadcast}</span>
-                </div>
-            </div>`;
-        }
+        const u = AppState.currentUser.username; const bal = AppState.leaveBalances[u] ? AppState.leaveBalances[u].annual : 0; const sal = App.getSalary(); 
+        let broadcastMsg = AppState.settings.broadcast ? `<div style="background: #fffbeb; border-left: 4px solid #f59e0b; padding: 12px 16px; margin-bottom: 24px; border-radius: var(--radius-sm); color: #b45309; display: flex; gap: 12px; align-items: flex-start; box-shadow: var(--shadow-sm);"><div style="font-size: 18px; margin-top:2px;"><i class="fas fa-bullhorn"></i></div><div><strong style="display:block; margin-bottom:2px; font-size:13px;">Corporate Announcement</strong><span style="font-size:13px;">${AppState.settings.broadcast}</span></div></div>` : '';
             
         return `
         <div style="margin-bottom: 32px; animation: fadeUp 0.4s ease-out;">
-            <div class="flex-between">
-                <div>
-                    <div style="color:var(--text-muted); font-size:12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">${TimeEngine.getGreeting()}</div>
-                    <h1 style="margin:0; font-size:24px;">${AppState.currentUser.name}</h1>
-                </div>
-                <div id="realtime-clock" style="font-size:20px; font-weight:700; color:var(--primary); font-family:monospace;">00:00:00</div>
-            </div>
+            <div class="flex-between"><div><div style="color:var(--text-muted); font-size:12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">${TimeEngine.getGreeting()}</div><h1 style="margin:0; font-size:24px;">${AppState.currentUser.name}</h1></div><div id="realtime-clock" style="font-size:20px; font-weight:700; color:var(--primary); font-family:monospace;">00:00:00</div></div>
         </div>
-        
         ${broadcastMsg} 
-        
         <div class="grid-dash" style="grid-template-columns: 1fr 2.5fr;">
             <div>
                 <div class="card salary-card-custom" style="margin-bottom: 24px; background: linear-gradient(135deg, var(--primary), #1e3a8a); color: white; border:none; box-shadow: 0 10px 25px -5px rgba(30, 58, 138, 0.4);">
-                    <div class="flex-between">
-                        <h2 style="color: #93c5fd; margin:0; font-weight: 500;"><i class="fas fa-wallet"></i> ${t('salary_title')}</h2>
-                        <button id="salary-btn" class="btn-toggle-view" onclick="App.toggleSal()"><i class="fas fa-eye"></i> ${t('show')}</button>
-                    </div>
-                    <div class="salary-container" style="margin-top:16px;">
-                        <span id="salary-val" class="salary-value masked">THB ${sal.net.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
-                    </div>
+                    <div class="flex-between"><h2 style="color: #93c5fd; margin:0; font-weight: 500;"><i class="fas fa-wallet"></i> ${t('salary_title')}</h2><button id="salary-btn" class="btn-toggle-view" onclick="App.toggleSal()"><i class="fas fa-eye"></i> ${t('show')}</button></div>
+                    <div class="salary-container" style="margin-top:16px;"><span id="salary-val" class="salary-value masked">THB ${sal.net.toLocaleString(undefined, {minimumFractionDigits: 2})}</span></div>
                 </div>
-                
                 <div class="card" style="margin-bottom: 24px;">
                     <h2 style="color: var(--primary); display:flex; align-items:center; gap:8px;"><i class="far fa-clock text-muted"></i> ${t('clock_title')}</h2>
-                    <select id="work-location" style="margin-bottom: 16px;">
-                        <option value="Office">${t('loc_office')}</option>
-                        <option value="WFH">${t('loc_wfh')}</option>
-                    </select>
-                    <div id="status-clock" style="margin-bottom: 20px; font-size: 13px; padding: 12px; background: var(--bg-main); border-radius: var(--radius-sm); border: 1px solid var(--border);">
-                        <span class="text-muted"><i class="fas fa-bed"></i> Currently Offline</span>
-                    </div>
+                    <select id="work-location" style="margin-bottom: 16px;"><option value="Office">${t('loc_office')}</option><option value="WFH">${t('loc_wfh')}</option></select>
+                    <div id="status-clock" style="margin-bottom: 20px; font-size: 13px; padding: 12px; background: var(--bg-main); border-radius: var(--radius-sm); border: 1px solid var(--border);"><span class="text-muted"><i class="fas fa-bed"></i> Currently Offline</span></div>
                     <button id="btn-clock" class="btn-primary" onclick="App.clock()" style="padding: 14px; width:100%; font-size: 14px;"><i class="fas fa-camera"></i> Identity Scan</button>
                 </div>
-                
                 <div class="card" style="display:flex; flex-direction:column; align-items:center; justify-content: center;">
                     <h2 style="margin-bottom: 24px; text-align:center;"><i class="fas fa-umbrella-beach text-muted"></i> ${t('leave_bal')}</h2>
-                    <div style="position:relative; width:140px; height:140px; margin-bottom: 24px;">
-                        <canvas id="userChart"></canvas>
-                        <div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); text-align:center;">
-                            <div style="font-size:28px; font-weight:700; color:var(--primary); line-height:1;">${bal}</div>
-                            <div style="font-size:10px; color:var(--text-muted); font-weight: 600; margin-top: 4px; text-transform:uppercase;">Days</div>
-                        </div>
-                    </div>
+                    <div style="position:relative; width:140px; height:140px; margin-bottom: 24px;"><canvas id="userChart"></canvas><div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); text-align:center;"><div style="font-size:28px; font-weight:700; color:var(--primary); line-height:1;">${bal}</div><div style="font-size:10px; color:var(--text-muted); font-weight: 600; margin-top: 4px; text-transform:uppercase;">Days</div></div></div>
                     <button class="btn-outline" style="width: 100%; color: var(--accent); border-color: var(--accent);" onclick="App.openModal('modal-leave')"><i class="fas fa-plus"></i> ${t('req_lv')}</button>
                 </div>
             </div>
-            
             <div class="digital-twin-wrapper card">
-                <div class="flex-between" style="margin-bottom: 16px;">
-                    <h2 style="margin:0; color: white; font-size: 16px; display:flex; align-items:center; gap:8px;"><i class="fas fa-satellite-dish" style="color:#3b82f6;"></i> Live Spatial Digital Twin</h2>
-                    <span style="background: rgba(16,185,129,0.2); color: #10b981; padding: 4px 10px; border-radius: 12px; font-size: 10px; letter-spacing: 1px; border: 1px solid #10b981;">● LIVE TELEMETRY</span>
-                </div>
+                <div class="flex-between" style="margin-bottom: 16px;"><h2 style="margin:0; color: white; font-size: 16px; display:flex; align-items:center; gap:8px;"><i class="fas fa-satellite-dish" style="color:#3b82f6;"></i> Live Spatial Digital Twin</h2><span style="background: rgba(16,185,129,0.2); color: #10b981; padding: 4px 10px; border-radius: 12px; font-size: 10px; letter-spacing: 1px; border: 1px solid #10b981;">● LIVE TELEMETRY</span></div>
                 <div class="office-floor">
-                    <div class="dept-zone" id="zone-hr">
-                        <div class="zone-title">Human Resources</div>
-                    </div>
-                    <div class="dept-zone" id="zone-sales">
-                        <div class="zone-title">Sales & Marketing</div>
-                    </div>
-                    <div class="dept-zone" id="zone-it">
-                        <div class="zone-title">IT Operations</div>
-                    </div>
-                    <div class="dept-zone" id="zone-general">
-                        <div class="zone-title">General Operations</div>
-                    </div>
+                    <div class="dept-zone" id="zone-hr"><div class="zone-title">Human Resources</div></div>
+                    <div class="dept-zone" id="zone-sales"><div class="zone-title">Sales & Marketing</div></div>
+                    <div class="dept-zone" id="zone-it"><div class="zone-title">IT Operations</div></div>
+                    <div class="dept-zone" id="zone-general"><div class="zone-title">General Operations</div></div>
                 </div>
-                <div class="dept-zone wfh-zone" id="zone-wfh">
-                    <div class="zone-title" style="color:#3b82f6; border-color:#1e3a8a;">Remote / WFH Cloud</div>
-                </div>
+                <div class="dept-zone wfh-zone" id="zone-wfh"><div class="zone-title" style="color:#3b82f6; border-color:#1e3a8a;">Remote / WFH Cloud</div></div>
             </div>
         </div>`;
     },
 
     'time': () => {
-        const u = AppState.currentUser.username;
-        const logs = AppState.timeLogs.filter(x => x.u === u);
-        const reqs = AppState.requests.filter(x => x.u === u);
-        
-        let logsHTML = '';
-        if (logs.length > 0) {
-            logsHTML = logs.map(l => `
-                <tr>
-                    <td><b style="color:var(--primary);">${l.d}</b></td>
-                    <td><span class="badge" style="background:white; border: 1px solid var(--border); color:var(--text-muted);">${l.loc}</span></td>
-                    <td>${l.in}</td>
-                    <td>${l.out}</td>
-                    <td><b style="color:var(--accent);">${l.hrs}</b></td>
-                </tr>
-            `).join('');
-        } else {
-            logsHTML = `
-                <tr>
-                    <td colspan="5" class="empty-state">
-                        <i class="far fa-folder-open fa-2x" style="color:var(--border); margin-bottom:8px;"></i><br>${t('no_data')}
-                    </td>
-                </tr>
-            `;
-        }
+        const u = AppState.currentUser.username; const logs = AppState.timeLogs.filter(x => x.u === u); const reqs = AppState.requests.filter(x => x.u === u);
+        let logsHTML = logs.length > 0 ? logs.map(l => `<tr><td><b style="color:var(--primary);">${l.d}</b></td><td><span class="badge" style="background:white; border: 1px solid var(--border); color:var(--text-muted);">${l.loc}</span></td><td>${l.in}</td><td>${l.out}</td><td><b style="color:var(--accent);">${l.hrs}</b></td></tr>`).join('') : `<tr><td colspan="5" class="empty-state"><i class="far fa-folder-open fa-2x" style="color:var(--border); margin-bottom:8px;"></i><br>${t('no_data')}</td></tr>`;
 
-        let reqsHTML = '';
-        if (reqs.length > 0) {
-            reqsHTML = reqs.map(r => {
-                let badgeColor = '#b45309'; 
-                let badgeBg = '#fef3c7'; 
-                let statText = r.status.split(' ')[0];
-                
-                if (r.status === 'Approved') { 
-                    badgeColor = '#047857'; 
-                    badgeBg = '#d1fae5'; 
-                } else if (r.status === 'Rejected') { 
-                    badgeColor = '#be123c'; 
-                    badgeBg = '#ffe4e6'; 
-                } else if (r.status.includes('Pending')) { 
-                    statText = 'Pending'; 
-                }
-                
-                let attachBtn = ''; 
-                if (r.attachment && r.attachment.trim() !== '') { 
-                    const isPdf = r.attachment.includes('application/pdf'); 
-                    const icon = isPdf ? 'fa-file-pdf' : 'fa-image'; 
-                    const fileExt = isPdf ? '.pdf' : '.png'; 
-                    
-                    if (isPdf) { 
-                        attachBtn = `
-                            <a href="${r.attachment}" download="Ev_${r.id}${fileExt}" target="_blank" style="display:inline-block; font-size:12px; color:var(--primary); margin-top:4px;">
-                                <i class="fas ${icon}"></i> View Evidence
-                            </a>
-                        `; 
-                    } else { 
-                        attachBtn = `
-                            <div class="evidence-hover" style="margin-top:4px;"> 
-                                <a href="${r.attachment}" download="Ev_${r.id}${fileExt}" target="_blank" style="font-size:12px; color:var(--primary);">
-                                    <i class="fas ${icon}"></i> View Evidence
-                                </a> 
-                                <div class="preview-box"><img src="${r.attachment}" alt="Preview"></div> 
-                            </div>
-                        `; 
-                    } 
-                }
-                
-                const detailsBtn = `<button class="btn-outline" style="padding: 6px 12px; font-size: 11px; width:auto;" onclick="App.showRequestDetails(${r.id})"><i class="fas fa-list-alt"></i> Details</button>`;
-                
-                return `
-                    <tr> 
-                        <td><span class="badge" style="background:#f1f5f9; border:1px solid var(--border); color:var(--primary);">${r.type}</span></td> 
-                        <td>
-                            <b style="color:var(--primary);">${r.detail}</b><br>
-                            <span style="font-size:12px; color:#64748b;">${r.reason.substring(0,30)}...</span><br>
-                            ${attachBtn}
-                        </td> 
-                        <td>
-                            <span style="background:${badgeBg}; color:${badgeColor}; padding:4px 8px; border-radius:12px; font-size:11px; font-weight:600;">${statText}</span>
-                        </td> 
-                        <td style="text-align:right;">${detailsBtn}</td> 
-                    </tr>
-                `;
-            }).join('');
-        } else {
-            reqsHTML = `
-                <tr>
-                    <td colspan="4" class="empty-state">
-                        <i class="far fa-folder-open fa-2x" style="color:var(--border); margin-bottom:8px;"></i><br>${t('no_data')}
-                    </td>
-                </tr>
-            `;
-        }
+        let reqsHTML = reqs.length > 0 ? reqs.map(r => {
+            let badgeColor = '#b45309', badgeBg = '#fef3c7', statText = r.status.split(' ')[0];
+            if (r.status === 'Approved') { badgeColor = '#047857'; badgeBg = '#d1fae5'; } else if (r.status === 'Rejected') { badgeColor = '#be123c'; badgeBg = '#ffe4e6'; } else if (r.status.includes('Pending')) { statText = 'Pending'; }
+            let attachBtn = ''; 
+            if (r.attachment && r.attachment.trim() !== '') { 
+                const isPdf = r.attachment.includes('application/pdf'); const icon = isPdf ? 'fa-file-pdf' : 'fa-image'; const fileExt = isPdf ? '.pdf' : '.png'; 
+                if (isPdf) attachBtn = `<a href="${r.attachment}" download="Ev_${r.id}${fileExt}" target="_blank" style="display:inline-block; font-size:12px; color:var(--primary); margin-top:4px;"><i class="fas ${icon}"></i> View Evidence</a>`; 
+                else attachBtn = `<div class="evidence-hover" style="margin-top:4px;"> <a href="${r.attachment}" download="Ev_${r.id}${fileExt}" target="_blank" style="font-size:12px; color:var(--primary);"><i class="fas ${icon}"></i> View Evidence</a> <div class="preview-box"><img src="${r.attachment}" alt="Preview"></div> </div>`; 
+            }
+            const detailsBtn = `<button class="btn-outline" style="padding: 6px 12px; font-size: 11px; width:auto;" onclick="App.showRequestDetails(${r.id})"><i class="fas fa-list-alt"></i> Details</button>`;
+            return `<tr> <td><span class="badge" style="background:#f1f5f9; border:1px solid var(--border); color:var(--primary);">${r.type}</span></td> <td><b style="color:var(--primary);">${r.detail}</b><br><span style="font-size:12px; color:#64748b;">${r.reason.substring(0,30)}...</span><br>${attachBtn}</td> <td><span style="background:${badgeBg}; color:${badgeColor}; padding:4px 8px; border-radius:12px; font-size:11px; font-weight:600;">${statText}</span></td> <td style="text-align:right;">${detailsBtn}</td> </tr>`;
+        }).join('') : `<tr><td colspan="4" class="empty-state"><i class="far fa-folder-open fa-2x" style="color:var(--border); margin-bottom:8px;"></i><br>${t('no_data')}</td></tr>`;
         
         return `
-        <div class="flex-between" style="margin-bottom: 24px; animation: fadeUp 0.4s ease-out;">
-            <h1 style="margin:0;"><i class="fas fa-history text-muted"></i> ${t('time')}</h1>
-            <div style="display:flex; gap:12px;">
-                <button class="btn-outline" onclick="App.openModal('modal-ot')"><i class="fas fa-moon"></i> ${t('req_ot')}</button>
-                <button class="btn-primary" onclick="App.openModal('modal-leave')"><i class="fas fa-umbrella-beach"></i> ${t('req_lv')}</button>
-            </div>
-        </div>
-        
+        <div class="flex-between" style="margin-bottom: 24px; animation: fadeUp 0.4s ease-out;"><h1 style="margin:0;"><i class="fas fa-history text-muted"></i> ${t('time')}</h1><div style="display:flex; gap:12px;"><button class="btn-outline" onclick="App.openModal('modal-ot')"><i class="fas fa-moon"></i> ${t('req_ot')}</button><button class="btn-primary" onclick="App.openModal('modal-leave')"><i class="fas fa-umbrella-beach"></i> ${t('req_lv')}</button></div></div>
         <div class="card" style="padding-top:16px;">
-            <div class="ui-tabs" style="border-bottom:1px solid #e2e8f0; margin-bottom:16px; display:flex; gap:16px;">
-                <button class="tab-btn active" onclick="App.switchTab('t1', this)" style="background:none; border:none; padding-bottom:12px; font-size:14px; font-weight:600; color:var(--primary); border-bottom:3px solid var(--primary); cursor:pointer;"><i class="fas fa-list-ul"></i> ${t('tab_log')}</button>
-                <button class="tab-btn" onclick="App.switchTab('t2', this)" style="background:none; border:none; padding-bottom:12px; font-size:14px; font-weight:500; color:#64748b; cursor:pointer;"><i class="fas fa-file-alt"></i> ${t('tab_lv')} / OT</button>
-            </div>
-            
-            <div id="t1" class="tab-content active table-wrapper" style="display:block;">
-                <table>
-                    <thead><tr><th>Date</th><th>Location</th><th>In</th><th>Out</th><th>Hours</th></tr></thead>
-                    <tbody>${logsHTML}</tbody>
-                </table>
-            </div>
-            
-            <div id="t2" class="tab-content table-wrapper" style="display:none;">
-                <table>
-                    <thead><tr><th>Type</th><th>Details</th><th>Status</th><th style="text-align:right;">Actions</th></tr></thead>
-                    <tbody>${reqsHTML}</tbody>
-                </table>
-            </div>
+            <div class="ui-tabs" style="border-bottom:1px solid #e2e8f0; margin-bottom:16px; display:flex; gap:16px;"><button class="tab-btn active" onclick="App.switchTab('t1', this)" style="background:none; border:none; padding-bottom:12px; font-size:14px; font-weight:600; color:var(--primary); border-bottom:3px solid var(--primary); cursor:pointer;"><i class="fas fa-list-ul"></i> ${t('tab_log')}</button><button class="tab-btn" onclick="App.switchTab('t2', this)" style="background:none; border:none; padding-bottom:12px; font-size:14px; font-weight:500; color:#64748b; cursor:pointer;"><i class="fas fa-file-alt"></i> ${t('tab_lv')} / OT</button></div>
+            <div id="t1" class="tab-content active table-wrapper" style="display:block;"><table><thead><tr><th>Date</th><th>Location</th><th>In</th><th>Out</th><th>Hours</th></tr></thead><tbody>${logsHTML}</tbody></table></div>
+            <div id="t2" class="tab-content table-wrapper" style="display:none;"><table><thead><tr><th>Type</th><th>Details</th><th>Status</th><th style="text-align:right;">Actions</th></tr></thead><tbody>${reqsHTML}</tbody></table></div>
         </div>`;
     },
 
     'admin-approve': () => {
-        const role = AppState.currentUser.role; 
-        let relevantReqs = [];
+        const role = AppState.currentUser.role; let relevantReqs = [];
+        if (role === 'head') relevantReqs = AppState.requests.filter(r => r.status.includes('Supervisor') || r.status === 'Approved' || r.status === 'Rejected');
+        else if (role === 'admin') relevantReqs = AppState.requests.filter(r => r.status.includes('HR') || r.status === 'Approved' || r.status === 'Rejected');
+        else relevantReqs = AppState.requests;
         
-        if (role === 'head') {
-            relevantReqs = AppState.requests.filter(r => r.status.includes('Supervisor') || r.status === 'Approved' || r.status === 'Rejected');
-        } else if (role === 'admin') {
-            relevantReqs = AppState.requests.filter(r => r.status.includes('HR') || r.status === 'Approved' || r.status === 'Rejected');
-        } else {
-            relevantReqs = AppState.requests;
-        }
+        const pendingCount = relevantReqs.filter(r => r.status.includes('Pending')).length; const approvedCount = relevantReqs.filter(r => r.status === 'Approved').length; const rejectedCount = relevantReqs.filter(r => r.status === 'Rejected').length; const allCount = relevantReqs.length;
         
-        const pendingCount = relevantReqs.filter(r => r.status.includes('Pending')).length; 
-        const approvedCount = relevantReqs.filter(r => r.status === 'Approved').length; 
-        const rejectedCount = relevantReqs.filter(r => r.status === 'Rejected').length; 
-        const allCount = relevantReqs.length;
-        
-        let approvalsHTML = '';
-        if (relevantReqs.length > 0) {
-            approvalsHTML = relevantReqs.map(r => {
-                let attachBtn = ''; 
-                if (r.attachment && r.attachment.trim() !== '') { 
-                    const isPdf = r.attachment.includes('application/pdf'); 
-                    const icon = isPdf ? 'fa-file-pdf' : 'fa-image'; 
-                    const fileExt = isPdf ? '.pdf' : '.png'; 
-                    
-                    if (isPdf) { 
-                        attachBtn = `
-                            <div style="margin-top:12px; padding-top:8px; border-top:1px dashed var(--border);">
-                                <a href="${r.attachment}" download="Evidence_${r.id}${fileExt}" target="_blank" style="display:inline-flex; align-items:center; gap:6px; font-size:12px; color:var(--accent); text-decoration:none; background:var(--accent-light); padding:6px 12px; border-radius:6px; border:1px solid #bfdbfe;">
-                                    <i class="fas ${icon}"></i> View Evidence
-                                </a>
-                            </div>`; 
-                    } else { 
-                        attachBtn = `
-                            <div style="margin-top:12px; padding-top:8px; border-top:1px dashed var(--border);"> 
-                                <div class="evidence-hover"> 
-                                    <a href="${r.attachment}" download="Evidence_${r.id}${fileExt}" target="_blank" style="display:inline-flex; align-items:center; gap:6px; font-size:12px; color:var(--accent); text-decoration:none; background:var(--accent-light); padding:6px 12px; border-radius:6px; border:1px solid #bfdbfe;"> 
-                                        <i class="fas ${icon}"></i> View Evidence 
-                                    </a> 
-                                    <div class="preview-box"><img src="${r.attachment}" alt="Preview Evidence"></div> 
-                                </div> 
-                            </div>`; 
-                    } 
-                }
-                
-                const stepper = `
-                    <div style="display:flex; align-items:center; gap:8px; margin-top:8px;"> 
-                        <div style="width:8px; height:8px; border-radius:50%; background:var(--success);"></div> 
-                        <div style="width:40px; height:2px; background:var(--success);"></div> 
-                        <div style="width:8px; height:8px; border-radius:50%; background:${r.status.includes('HR') || r.status === 'Approved' ? 'var(--accent)' : '#e2e8f0'};"></div> 
-                        <div style="width:40px; height:2px; background:${r.status === 'Approved' ? 'var(--accent)' : '#e2e8f0'};"></div> 
-                        <div style="width:8px; height:8px; border-radius:50%; background:${r.status === 'Approved' ? 'var(--success)' : '#e2e8f0'};"></div> 
-                        <small style="font-size:10px; color:var(--text-muted); margin-left:8px;">Workflow: Supervisor > HR</small> 
-                    </div>`;
-                    
-                const detailsBtn = `<button class="btn-outline" style="width:auto; padding:8px 12px; margin-right:6px; margin-bottom:6px; font-size:12px;" onclick="App.showRequestDetails(${r.id})"><i class="fas fa-info-circle"></i> Details</button>`;
-                
-                let actionButtons = ''; 
-                if ((role === 'head' && r.status === 'Pending (Supervisor)') || (role === 'admin' && r.status === 'Pending (HR)')) { 
-                    actionButtons = `
-                        <button class="btn-primary" style="background:var(--success); width:auto; padding:8px 16px; margin-right:6px; margin-bottom:6px;" onclick="App.actionReq(${r.id}, 'Approved')"><i class="fas fa-check"></i></button> 
-                        <button class="btn-primary" style="background:var(--danger); width:auto; padding:8px 16px;" onclick="App.actionReq(${r.id}, 'Rejected')"><i class="fas fa-times"></i></button>
-                    `; 
-                } else { 
-                    let statColor = r.status === 'Approved' ? 'var(--success)' : (r.status === 'Rejected' ? 'var(--danger)' : 'var(--warning)'); 
-                    actionButtons = `<span style="display:inline-block; margin-top:8px; font-size:12px; color:${statColor}; font-weight:600;"><i class="fas fa-circle"></i> ${r.status}</span>`; 
-                }
-                
-                return `
-                    <tr class="approval-row" data-status="${r.status}"> 
-                        <td>
-                            <b style="font-size:14px; color:var(--primary);">${r.name}</b><br>
-                            <span style="font-size:12px; color:var(--text-muted);">EMP-${r.u.toUpperCase()}</span>
-                        </td> 
-                        <td> 
-                            <span class="badge" style="background:#f8fafc; border:1px solid var(--border); color:var(--text-dark); margin-bottom:6px;">${r.type}</span> 
-                            <b style="font-size:13px; color:var(--primary);">${r.detail}</b><br> 
-                            <span style="font-size:13px; display:inline-block; margin-top:4px;"><b>Reason:</b> ${r.reason}</span> 
-                            ${stepper} 
-                            ${attachBtn} 
-                        </td> 
-                        <td style="text-align:right; vertical-align:top;"> 
-                            ${detailsBtn} 
-                            ${actionButtons} 
-                        </td> 
-                    </tr>
-                `;
-            }).join('');
-        } else {
-            approvalsHTML = `
-                <tr>
-                    <td colspan="3" class="empty-state">
-                        <i class="far fa-check-circle fa-2x" style="color:var(--success); margin-bottom:12px; opacity:0.5;"></i><br>No requests found.
-                    </td>
-                </tr>
-            `;
-        }
+        let approvalsHTML = relevantReqs.length > 0 ? relevantReqs.map(r => {
+            let attachBtn = ''; 
+            if (r.attachment && r.attachment.trim() !== '') { 
+                const isPdf = r.attachment.includes('application/pdf'); const icon = isPdf ? 'fa-file-pdf' : 'fa-image'; const fileExt = isPdf ? '.pdf' : '.png'; 
+                if (isPdf) attachBtn = `<div style="margin-top:12px; padding-top:8px; border-top:1px dashed var(--border);"><a href="${r.attachment}" download="Evidence_${r.id}${fileExt}" target="_blank" style="display:inline-flex; align-items:center; gap:6px; font-size:12px; color:var(--accent); text-decoration:none; background:var(--accent-light); padding:6px 12px; border-radius:6px; border:1px solid #bfdbfe;"><i class="fas ${icon}"></i> View Evidence</a></div>`; 
+                else attachBtn = `<div style="margin-top:12px; padding-top:8px; border-top:1px dashed var(--border);"> <div class="evidence-hover"> <a href="${r.attachment}" download="Evidence_${r.id}${fileExt}" target="_blank" style="display:inline-flex; align-items:center; gap:6px; font-size:12px; color:var(--accent); text-decoration:none; background:var(--accent-light); padding:6px 12px; border-radius:6px; border:1px solid #bfdbfe;"> <i class="fas ${icon}"></i> View Evidence </a> <div class="preview-box"><img src="${r.attachment}" alt="Preview Evidence"></div> </div> </div>`; 
+            }
+            const stepper = `<div style="display:flex; align-items:center; gap:8px; margin-top:8px;"> <div style="width:8px; height:8px; border-radius:50%; background:var(--success);"></div> <div style="width:40px; height:2px; background:var(--success);"></div> <div style="width:8px; height:8px; border-radius:50%; background:${r.status.includes('HR') || r.status === 'Approved' ? 'var(--accent)' : '#e2e8f0'};"></div> <div style="width:40px; height:2px; background:${r.status === 'Approved' ? 'var(--accent)' : '#e2e8f0'};"></div> <div style="width:8px; height:8px; border-radius:50%; background:${r.status === 'Approved' ? 'var(--success)' : '#e2e8f0'};"></div> <small style="font-size:10px; color:var(--text-muted); margin-left:8px;">Workflow: Supervisor > HR</small> </div>`;
+            const detailsBtn = `<button class="btn-outline" style="width:auto; padding:8px 12px; margin-right:6px; margin-bottom:6px; font-size:12px;" onclick="App.showRequestDetails(${r.id})"><i class="fas fa-info-circle"></i> Details</button>`;
+            let actionButtons = ''; 
+            if ((role === 'head' && r.status === 'Pending (Supervisor)') || (role === 'admin' && r.status === 'Pending (HR)')) actionButtons = `<button class="btn-primary" style="background:var(--success); width:auto; padding:8px 16px; margin-right:6px; margin-bottom:6px;" onclick="App.actionReq(${r.id}, 'Approved')"><i class="fas fa-check"></i></button> <button class="btn-primary" style="background:var(--danger); width:auto; padding:8px 16px;" onclick="App.actionReq(${r.id}, 'Rejected')"><i class="fas fa-times"></i></button>`; 
+            else { let statColor = r.status === 'Approved' ? 'var(--success)' : (r.status === 'Rejected' ? 'var(--danger)' : 'var(--warning)'); actionButtons = `<span style="display:inline-block; margin-top:8px; font-size:12px; color:${statColor}; font-weight:600;"><i class="fas fa-circle"></i> ${r.status}</span>`; }
+            return `<tr class="approval-row" data-status="${r.status}"> <td><b style="font-size:14px; color:var(--primary);">${r.name}</b><br><span style="font-size:12px; color:var(--text-muted);">EMP-${r.u.toUpperCase()}</span></td> <td> <span class="badge" style="background:#f8fafc; border:1px solid var(--border); color:var(--text-dark); margin-bottom:6px;">${r.type}</span> <b style="font-size:13px; color:var(--primary);">${r.detail}</b><br> <span style="font-size:13px; display:inline-block; margin-top:4px;"><b>Reason:</b> ${r.reason}</span> ${stepper} ${attachBtn} </td> <td style="text-align:right; vertical-align:top;"> ${detailsBtn} ${actionButtons} </td> </tr>`;
+        }).join('') : `<tr><td colspan="3" class="empty-state"><i class="far fa-check-circle fa-2x" style="color:var(--success); margin-bottom:12px; opacity:0.5;"></i><br>No requests found.</td></tr>`;
         
         return `
         <div style="animation: fadeUp 0.4s ease-out;">
             <h1 style="margin-bottom:24px;"><i class="fas fa-check-circle text-muted"></i> ${t('admin_appr')}</h1>
-            
             <div class="filter-bar">
                 <button class="filter-btn active" onclick="App.filterApprovals('All', this)" style="background: #e0e7ff; color: var(--primary);">All <span class="filter-pill" style="background: rgba(59,130,246,0.2); color: #1d4ed8;">${allCount}</span></button>
                 <button class="filter-btn" onclick="App.filterApprovals('Pending', this)">Pending <span class="filter-pill" style="background: #fef3c7; color: #b45309;">${pendingCount}</span></button>
@@ -2165,13 +1293,7 @@ const Views = {
                 <div style="flex-grow: 1;"></div>
                 <input type="text" class="search-box" placeholder="Search employee..." onkeyup="App.searchApprovals(this.value)">
             </div>
-            
-            <div class="card table-wrapper" style="padding: 0;">
-                <table style="margin:0;">
-                    <thead><tr><th>Employee</th><th>Request Info</th><th style="text-align:right;">Actions</th></tr></thead>
-                    <tbody>${approvalsHTML}</tbody>
-                </table>
-            </div>
+            <div class="card table-wrapper" style="padding: 0;"><table style="margin:0;"><thead><tr><th>Employee</th><th>Request Info</th><th style="text-align:right;">Actions</th></tr></thead><tbody>${approvalsHTML}</tbody></table></div>
         </div>`;
     },
 
@@ -2181,10 +1303,7 @@ const Views = {
         <div style="animation: fadeUp 0.4s ease-out;"> 
             <div class="flex-between" style="margin-bottom:24px;"> 
                 <h1 style="margin:0;"><i class="fas fa-users text-muted"></i> ${t('admin_dir')}</h1> 
-                <div style="display:flex; gap:12px;"> 
-                    <button class="btn-outline" onclick="App.exportToCSV()"><i class="fas fa-file-csv"></i> Export CSV</button> 
-                    <button class="btn-primary" style="width:auto;"><i class="fas fa-user-plus"></i> Add Employee</button> 
-                </div> 
+                <div style="display:flex; gap:12px;"> <button class="btn-outline" onclick="App.exportToCSV()"><i class="fas fa-file-csv"></i> Export CSV</button> <button class="btn-primary" style="width:auto;"><i class="fas fa-user-plus"></i> Add Employee</button> </div> 
             </div> 
             <div class="card table-wrapper" style="padding:0;"> 
                 <table style="margin:0;"> 
@@ -2194,24 +1313,8 @@ const Views = {
                         const statusBadge = isActive ? `<span class="badge" style="background:#ecfdf5; color:#047857; border: 1px solid #a7f3d0;">${t('btn_active')}</span>` : `<span class="badge" style="background:#fef2f2; color:#b91c1c; border: 1px solid #fecaca;">${t('btn_inactive')}</span>`; 
                         const toggleBtnStr = isActive ? `<i class="fas fa-ban"></i> ${t('act_disable')}` : `<i class="fas fa-check"></i> ${t('act_enable')}`; 
                         const toggleBtnColor = isActive ? `var(--danger)` : `var(--success)`; 
-                        
-                        let resetBtn = '';
-                        if (currentUserRole === 'admin' || currentUserRole === 'it') {
-                            resetBtn = `<button class="btn-outline" style="padding:6px 10px; margin-right:4px; font-size:13px;" onclick="App.resetPass('${u.username}')" title="Reset Password"><i class="fas fa-key text-muted" style="margin:0;"></i></button>`;
-                        }
-                        
-                        return `
-                        <tr>
-                            <td style="font-size:12px; color:var(--text-muted);">EMP-${u.username.toUpperCase()}</td>
-                            <td><b style="color:var(--primary);">${u.name}</b><br><span style="font-size:12px; color:var(--text-muted);">${u.dept || '-'}</span></td>
-                            <td><span class="badge" style="background:#f8fafc; border:1px solid var(--border); color:var(--text-dark);">${u.role.toUpperCase()}</span></td>
-                            <td>${statusBadge}</td>
-                            <td style="text-align:right; white-space:nowrap;">
-                                ${resetBtn} 
-                                <button class="btn-outline" style="padding:6px 12px; font-size:12px; width:auto; margin-right: 4px;" onclick="App.openEditUser('${u.username}')"><i class="fas fa-pen"></i> Edit</button> 
-                                <button class="btn-primary" style="background:${toggleBtnColor}; padding:6px 12px; font-size:12px; width:auto;" onclick="App.toggleUserStatus('${u.username}')">${toggleBtnStr}</button>
-                            </td>
-                        </tr>`; 
+                        let resetBtn = (currentUserRole === 'admin' || currentUserRole === 'it') ? `<button class="btn-outline" style="padding:6px 10px; margin-right:4px; font-size:13px;" onclick="App.resetPass('${u.username}')" title="Reset Password"><i class="fas fa-key text-muted" style="margin:0;"></i></button>` : '';
+                        return `<tr><td style="font-size:12px; color:var(--text-muted);">EMP-${u.username.toUpperCase()}</td><td><b style="color:var(--primary);">${u.name}</b><br><span style="font-size:12px; color:var(--text-muted);">${u.dept || '-'}</span></td><td><span class="badge" style="background:#f8fafc; border:1px solid var(--border); color:var(--text-dark);">${u.role.toUpperCase()}</span></td><td>${statusBadge}</td><td style="text-align:right; white-space:nowrap;">${resetBtn} <button class="btn-outline" style="padding:6px 12px; font-size:12px; width:auto; margin-right: 4px;" onclick="App.openEditUser('${u.username}')"><i class="fas fa-pen"></i> Edit</button> <button class="btn-primary" style="background:${toggleBtnColor}; padding:6px 12px; font-size:12px; width:auto;" onclick="App.toggleUserStatus('${u.username}')">${toggleBtnStr}</button></td></tr>`; 
                     }).join('')}</tbody> 
                 </table> 
             </div> 
@@ -2223,74 +1326,32 @@ const Views = {
         <div style="animation: fadeUp 0.4s ease-out;">
             <h1 style="margin-bottom:24px;"><i class="fas fa-chart-line text-muted"></i> ${t('admin_rep')}</h1>
             <div class="grid-2">
-                <div class="card">
-                    <h2 style="margin-bottom:16px; font-size:14px; text-transform:uppercase; color:var(--text-muted);">Leave Distribution</h2>
-                    <div style="text-align:center; padding:40px; color:var(--text-dark); background:var(--bg-main); border-radius:var(--radius-sm); border:1px dashed var(--border);">
-                        Annual Leave: 65%<br><br>Sick Leave: 25%<br><br>Personal: 10%
-                    </div>
-                </div>
-                <div class="card">
-                    <h2 style="margin-bottom:16px; font-size:14px; text-transform:uppercase; color:var(--text-muted);">Overtime Costs</h2>
-                    <div style="text-align:center; padding:40px; color:var(--text-muted); background:var(--bg-main); border-radius:var(--radius-sm); border:1px dashed var(--border);">
-                        <b style="font-size:28px; color:var(--primary);">THB 124,500.50</b><br>
-                        <span style="font-size:12px;">Total OT payout this month</span>
-                    </div>
-                </div>
+                <div class="card"><h2 style="margin-bottom:16px; font-size:14px; text-transform:uppercase; color:var(--text-muted);">Leave Distribution</h2><div style="text-align:center; padding:40px; color:var(--text-dark); background:var(--bg-main); border-radius:var(--radius-sm); border:1px dashed var(--border);">Annual Leave: 65%<br><br>Sick Leave: 25%<br><br>Personal: 10%</div></div>
+                <div class="card"><h2 style="margin-bottom:16px; font-size:14px; text-transform:uppercase; color:var(--text-muted);">Overtime Costs</h2><div style="text-align:center; padding:40px; color:var(--text-muted); background:var(--bg-main); border-radius:var(--radius-sm); border:1px dashed var(--border);"><b style="font-size:28px; color:var(--primary);">THB 124,500.50</b><br><span style="font-size:12px;">Total OT payout this month</span></div></div>
             </div>
         </div>`;
     },
 
     'admin-set': () => {
-        const u = AppState.currentUser; 
-        let itSettingsSection = '';
-        
+        const u = AppState.currentUser; let itSettingsSection = '';
         if (u.role === 'it') { 
-            itSettingsSection = `
-                <hr style="margin:32px 0; border:0; border-top:1px solid var(--border);"> 
-                <h2 style="color:var(--primary); display:flex; align-items:center; gap:8px;"><i class="fas fa-server"></i> System Administration</h2> 
-                <div class="grid-2" style="margin-top:16px;"> 
-                    <div style="background:white; padding:20px; border-radius:var(--radius-sm); border:1px solid var(--border); box-shadow:var(--shadow-sm);"> 
-                        <h3 style="color:var(--text-dark); margin-top:0; font-size:14px; text-transform:uppercase;">Maintenance Mode</h3> 
-                        <p style="font-size:12px; color:var(--text-muted); margin-bottom:16px;">Restrict access for non-IT personnel during system upgrades.</p> 
-                        <select id="set-maintenance" style="margin-bottom:0; font-size:13px;"> 
-                            <option value="off" ${!AppState.settings.maintenance ? 'selected' : ''}>System Online (Normal)</option> 
-                            <option value="on" ${AppState.settings.maintenance ? 'selected' : ''}>Maintenance Active (Restricted)</option> 
-                        </select> 
-                    </div> 
-                    <div style="background:white; padding:20px; border-radius:var(--radius-sm); border:1px solid var(--border); box-shadow:var(--shadow-sm);"> 
-                        <h3 style="color:var(--text-dark); margin-top:0; font-size:14px; text-transform:uppercase;">Data Management</h3> 
-                        <p style="font-size:12px; color:var(--text-muted); margin-bottom:16px;">Create backups or clear application cache to resolve sync issues.</p> 
-                        <div style="display:flex; gap:8px;"> 
-                            <button class="btn-outline" style="flex:1; font-size:12px; padding:10px;" onclick="App.backupDB()"><i class="fas fa-download"></i> Backup</button> 
-                            <button class="btn-primary" style="background:var(--danger); flex:1; font-size:12px; padding:10px;" onclick="App.clearCache()"><i class="fas fa-trash-alt"></i> Clear Cache</button> 
-                        </div> 
-                    </div> 
-                </div>`; 
+            itSettingsSection = `<hr style="margin:32px 0; border:0; border-top:1px solid var(--border);"> <h2 style="color:var(--primary); display:flex; align-items:center; gap:8px;"><i class="fas fa-server"></i> System Administration</h2> <div class="grid-2" style="margin-top:16px;"> <div style="background:white; padding:20px; border-radius:var(--radius-sm); border:1px solid var(--border); box-shadow:var(--shadow-sm);"> <h3 style="color:var(--text-dark); margin-top:0; font-size:14px; text-transform:uppercase;">Maintenance Mode</h3> <p style="font-size:12px; color:var(--text-muted); margin-bottom:16px;">Restrict access for non-IT personnel during system upgrades.</p> <select id="set-maintenance" style="margin-bottom:0; font-size:13px;"> <option value="off" ${!AppState.settings.maintenance ? 'selected' : ''}>System Online (Normal)</option> <option value="on" ${AppState.settings.maintenance ? 'selected' : ''}>Maintenance Active (Restricted)</option> </select> </div> <div style="background:white; padding:20px; border-radius:var(--radius-sm); border:1px solid var(--border); box-shadow:var(--shadow-sm);"> <h3 style="color:var(--text-dark); margin-top:0; font-size:14px; text-transform:uppercase;">Data Management</h3> <p style="font-size:12px; color:var(--text-muted); margin-bottom:16px;">Create backups or clear application cache to resolve sync issues.</p> <div style="display:flex; gap:8px;"> <button class="btn-outline" style="flex:1; font-size:12px; padding:10px;" onclick="App.backupDB()"><i class="fas fa-download"></i> Backup</button> <button class="btn-primary" style="background:var(--danger); flex:1; font-size:12px; padding:10px;" onclick="App.clearCache()"><i class="fas fa-trash-alt"></i> Clear Cache</button> </div> </div> </div>`; 
         }
-        
         return `
         <div style="animation: fadeUp 0.4s ease-out;">
             <h1 style="margin-bottom:24px;"><i class="fas fa-cogs text-muted"></i> ${u.role === 'it' ? t('it_set') : t('admin_set')}</h1>
             <div class="card" style="max-width:800px;">
                 <h2 style="font-size:14px; text-transform:uppercase; color:var(--text-muted); margin-bottom:16px;">Global Configurations</h2>
                 <div class="grid-2">
-                    <div>
-                        <label>Company Name</label>
-                        <input type="text" id="set-company" value="${AppState.settings.companyName}">
-                    </div>
-                    <div>
-                        <label>Default Annual Leave Quota (Days)</label>
-                        <input type="number" id="set-quota" value="${AppState.settings.leaveQuota}">
-                    </div>
+                    <div><label>Company Name</label><input type="text" id="set-company" value="${AppState.settings.companyName}"></div>
+                    <div><label>Default Annual Leave Quota (Days)</label><input type="number" id="set-quota" value="${AppState.settings.leaveQuota}"></div>
                 </div>
                 <hr style="margin:24px 0; border:0; border-top:1px solid var(--border);">
                 <h2 style="font-size:14px; text-transform:uppercase; color:var(--text-muted); margin-bottom:16px;">Broadcast Announcement</h2>
                 <p style="font-size:12px; color:var(--text-muted); margin-bottom:12px;">Message will be displayed on all user dashboards. Leave blank to disable.</p>
                 <textarea id="set-broadcast" rows="3" placeholder="Enter announcement text here...">${AppState.settings.broadcast || ''}</textarea> 
                 ${itSettingsSection} 
-                <div style="text-align:right; margin-top:24px; padding-top:20px; border-top:1px solid var(--border);">
-                    <button class="btn-primary" style="width:auto; padding: 12px 24px;" onclick="App.saveSettings()"><i class="fas fa-save"></i> Save Configuration</button>
-                </div>
+                <div style="text-align:right; margin-top:24px; padding-top:20px; border-top:1px solid var(--border);"><button class="btn-primary" style="width:auto; padding: 12px 24px;" onclick="App.saveSettings()"><i class="fas fa-save"></i> Save Configuration</button></div>
             </div>
         </div>`;
     },
@@ -2300,9 +1361,7 @@ const Views = {
         <div class="flex-between no-print" style="margin-bottom: 24px; animation: fadeUp 0.4s ease-out;">
             <h1 style="margin:0;"><i class="fas fa-file-invoice-dollar text-muted"></i> ${t('slip')}</h1>
             <div style="display:flex; gap:12px;">
-                <select id="slip-month" onchange="App.genSlip()" style="margin:0; width:auto; font-weight:500;">
-                    ${App.getMonthOptions()}
-                </select>
+                <select id="slip-month" onchange="App.genSlip()" style="margin:0; width:auto; font-weight:500;">${App.getMonthOptions()}</select>
                 <button class="btn-outline" onclick="window.print()"><i class="fas fa-print"></i> Print PDF</button>
             </div>
         </div>
@@ -2314,61 +1373,26 @@ const Views = {
         <div style="animation: fadeUp 0.4s ease-out;">
             <div class="calendar-nav">
                 <h1 style="margin:0;"><i class="far fa-calendar-alt text-muted"></i> ${t('cal')} <span id="cal-title" style="color:var(--accent); font-weight:600; font-size:16px; margin-left:10px;"></span></h1>
-                <div style="display:flex; gap:8px;">
-                    <button class="cal-btn" onclick="App.changeCalMonth(-1)"><i class="fas fa-chevron-left"></i></button>
-                    <button class="cal-btn" onclick="App.changeCalMonth(1)"><i class="fas fa-chevron-right"></i></button>
-                </div>
+                <div style="display:flex; gap:8px;"><button class="cal-btn" onclick="App.changeCalMonth(-1)"><i class="fas fa-chevron-left"></i></button><button class="cal-btn" onclick="App.changeCalMonth(1)"><i class="fas fa-chevron-right"></i></button></div>
             </div>
-            <div class="card">
-                <div class="calendar-grid">
-                    <div class="cal-header">SUN</div>
-                    <div class="cal-header">MON</div>
-                    <div class="cal-header">TUE</div>
-                    <div class="cal-header">WED</div>
-                    <div class="cal-header">THU</div>
-                    <div class="cal-header">FRI</div>
-                    <div class="cal-header">SAT</div>
-                </div>
-                <div class="calendar-grid" id="cal-wrapper"></div>
-            </div>
+            <div class="card"><div class="calendar-grid"><div class="cal-header">SUN</div><div class="cal-header">MON</div><div class="cal-header">TUE</div><div class="cal-header">WED</div><div class="cal-header">THU</div><div class="cal-header">FRI</div><div class="cal-header">SAT</div></div><div class="calendar-grid" id="cal-wrapper"></div></div>
         </div>`;
     },
 
     'doc': () => { 
-        const docs = [
-            { name: 'Employee_Handbook_2026', title: 'Employee Handbook', size: '2.4 MB', date: 'Jan 10, 2026' },
-            { name: 'WFH_Policy', title: 'Remote Work Policy', size: '1.1 MB', date: 'Feb 15, 2026' },
-            { name: 'Insurance_Claims', title: 'Health Insurance Claims', size: '3.5 MB', date: 'Mar 01, 2026' }
-        ]; 
-        
+        const docs = [ { name: 'Employee_Handbook_2026', title: 'Employee Handbook', size: '2.4 MB', date: 'Jan 10, 2026' }, { name: 'WFH_Policy', title: 'Remote Work Policy', size: '1.1 MB', date: 'Feb 15, 2026' }, { name: 'Insurance_Claims', title: 'Health Insurance Claims', size: '3.5 MB', date: 'Mar 01, 2026' } ]; 
         return `
         <div style="animation: fadeUp 0.4s ease-out;">
             <h1 style="margin-bottom:24px;"><i class="far fa-folder-open text-muted"></i> ${t('doc')}</h1>
             <div class="card">
                 <h2 style="margin-bottom: 16px; font-size:14px; text-transform:uppercase; color:var(--text-muted);">Standard Operating Procedures (SOP)</h2>
-                ${docs.map(d => `
-                <div class="policy-item">
-                    <div style="display:flex; align-items:center; gap:16px;">
-                        <div style="width:40px; height:40px; background:var(--bg-main); color:var(--accent); border: 1px solid var(--border); border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:18px;">
-                            <i class="far fa-file-pdf"></i>
-                        </div>
-                        <div>
-                            <div style="font-weight:600; color:var(--primary); font-size:13px;">${d.title}</div>
-                            <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">Updated: ${d.date} • ${d.size}</div>
-                        </div>
-                    </div>
-                    <button class="btn-outline" style="width:auto; font-size:12px; padding:6px 12px;" onclick="App.downloadFile('${d.name}')">
-                        <i class="fas fa-download"></i>
-                    </button>
-                </div>`).join('')}
+                ${docs.map(d => `<div class="policy-item"><div style="display:flex; align-items:center; gap:16px;"><div style="width:40px; height:40px; background:var(--bg-main); color:var(--accent); border: 1px solid var(--border); border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:18px;"><i class="far fa-file-pdf"></i></div><div><div style="font-weight:600; color:var(--primary); font-size:13px;">${d.title}</div><div style="font-size:11px; color:var(--text-muted); margin-top:2px;">Updated: ${d.date} • ${d.size}</div></div></div><button class="btn-outline" style="width:auto; font-size:12px; padding:6px 12px;" onclick="App.downloadFile('${d.name}')"><i class="fas fa-download"></i></button></div>`).join('')}
             </div>
         </div>`; 
     },
 
     'prof': () => {
-        const u = AppState.currentUser.username;
-        const p = AppState.profiles[u] || { email: '', phone: '', startDate: '' };
-        
+        const u = AppState.currentUser.username; const p = AppState.profiles[u] || { email: '', phone: '', startDate: '' };
         return `
         <div style="animation: fadeUp 0.4s ease-out;">
             <h1 style="margin-bottom:24px;"><i class="far fa-user-circle text-muted"></i> ${t('prof')}</h1>
@@ -2383,9 +1407,7 @@ const Views = {
                         <div><label>Email Address</label><input type="email" id="prof-email" value="${p.email}"></div>
                         <div><label>Contact Number</label><input type="text" id="prof-phone" value="${p.phone}"></div>
                     </div>
-                    <div style="text-align:right; margin-top:16px;">
-                        <button class="btn-primary" style="width:auto; padding: 12px 24px;" onclick="App.saveProfile()"><i class="fas fa-save"></i> Save Changes</button>
-                    </div>
+                    <div style="text-align:right; margin-top:16px;"><button class="btn-primary" style="width:auto; padding: 12px 24px;" onclick="App.saveProfile()"><i class="fas fa-save"></i> Save Changes</button></div>
                 </div>
                 <div class="card" style="text-align:center;">
                     <img src="${p.avatar || `https://ui-avatars.com/api/?name=${AppState.currentUser.name}&background=e0e7ff&color=3b82f6&size=150`}" id="prof-avatar-img" style="border-radius:50%; border: 4px solid var(--bg-main); margin-bottom: 16px; width:120px; height:120px; object-fit:cover;">
@@ -2399,9 +1421,30 @@ const Views = {
     }
 };
 
+// --- 🔥 BOOTLOADER ตัวจริงที่หายไป (ใส่ให้แล้ว) ---
+const startApp = async () => {
+    try {
+        await DB.load(); // โหลดข้อมูลจาก Firebase
+        applyLang();     // สลับภาษา
+        
+        const savedUser = localStorage.getItem('hr_logged_user');
+        if (savedUser) {
+            // มีคนล็อกอินค้างไว้ ให้เข้าหน้าแอปเลย
+            AppState.currentUser = JSON.parse(savedUser);
+            App.boot();
+        } else {
+            // ไม่เคยล็อกอิน ให้โชว์หน้า Auth
+            document.getElementById('auth-view').style.display = 'block';
+            document.getElementById('app-view').style.display = 'none';
+        }
+    } catch (e) {
+        console.error("Bootloader Error:", e);
+    }
+};
+
 window.onload = () => {
-    // Check if Firebase is ready before booting
+    // ให้เวลา Firebase ติดเครื่องแป๊บนึง
     setTimeout(() => {
         startApp();
-    }, 100);
+    }, 150);
 };

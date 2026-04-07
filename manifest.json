@@ -1,11 +1,11 @@
 {
-  "name": "S&J HR Portal",
-  "short_name": "S&J HR",
-  "description": "Enterprise HR Management System",
+  "name": "Enterprise HR OS",
+  "short_name": "HR OS",
+  "description": "Enterprise HR Management System for S&J International",
   "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#0f172a",
-  "theme_color": "#3b82f6",
+  "background_color": "#fbfbfc",
+  "theme_color": "#000000",
   "icons": [
     {
       "src": "https://cdn-icons-png.flaticon.com/512/3135/3135715.png",

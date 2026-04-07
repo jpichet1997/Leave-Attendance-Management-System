@@ -8,6 +8,9 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <link rel="stylesheet" href="style.css">
+    <link rel="manifest" href="./manifest.json">
+    <meta name="theme-color" content="#000000">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3135/3135715.png">
 </head>
 <body>
 
@@ -18,8 +21,8 @@
                 <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="url(#brand-gradient)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 16px;">
                     <defs>
                         <linearGradient id="brand-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                            <stop offset="0%" stop-color="#4f46e5" />
-                            <stop offset="100%" stop-color="#06b6d4" />
+                            <stop offset="0%" stop-color="#111111" />
+                            <stop offset="100%" stop-color="#444444" />
                         </linearGradient>
                     </defs>
                     <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
@@ -28,7 +31,7 @@
                 </svg>
                 <h1>Leave & Attendance</h1>
                 <p class="text-muted">S&J International Co., Ltd.</p>
-                <div class="badge" style="background: rgba(79, 70, 229, 0.1); color: #4f46e5; margin-top: 12px; font-weight: 700; letter-spacing: 0.5px;">
+                <div class="badge" style="background: rgba(0, 0, 0, 0.05); color: var(--text-heading); margin-top: 12px; font-weight: 700; letter-spacing: 0.5px;">
                     ENTERPRISE OS v2.0
                 </div>
             </div>
@@ -87,7 +90,7 @@
         <aside class="sidebar no-print">
             <div class="sidebar-header">
                 <div class="flex-between" style="justify-content: flex-start; gap: 16px;">
-                    <div style="background: linear-gradient(135deg, #4f46e5, #06b6d4); border-radius: 12px; padding: 10px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(79, 70, 229, 0.3);">
+                    <div style="background: var(--brand-main); border-radius: 12px; padding: 10px; display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow-sm);">
                         <i class="fas fa-layer-group" style="color: white; font-size: 18px; margin: 0;"></i>
                     </div>
                     <div>
@@ -101,7 +104,7 @@
                 </nav>
             
             <div style="padding: 24px; margin-top: auto;">
-                <button class="btn-outline" style="width:100%; background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.1); color: #cbd5e1;" onclick="Auth.logout()">
+                <button class="btn-outline" style="width:100%;" onclick="Auth.logout()">
                     <i class="fas fa-sign-out-alt"></i> <span class="th-en" data-th="ออกจากระบบ" data-en="Sign Out">ออกจากระบบ</span>
                 </button>
             </div>
@@ -130,7 +133,7 @@
                 <div style="display: flex; align-items: center; gap: 16px;">
                     <div style="text-align: right;">
                         <div id="user-name" style="font-weight: 700; font-size: 14px; color: var(--text-heading);">Name</div>
-                        <div id="user-dept" style="font-size: 12px; font-weight: 600; color: var(--brand-main);">Role</div>
+                        <div id="user-dept" style="font-size: 12px; font-weight: 600; color: var(--text-muted);">Role</div>
                     </div>
                     <img src="" id="avatar-img" style="width: 44px; height: 44px; border-radius: 14px; box-shadow: var(--shadow-sm); border: 2px solid white; object-fit: cover;" alt="Avatar">
                 </div>
@@ -146,7 +149,7 @@
         <div class="modal-content">
             <div class="details-header" style="padding: 0 0 24px 0; background: transparent; border-bottom: 1px solid var(--border-color); margin-bottom: 24px;">
                 <h1 style="margin:0; font-size: 20px;" class="th-en" data-th="📝 บันทึกขอลางาน" data-en="📝 Request Leave">📝 ขอลางาน</h1>
-                <button class="details-close" onclick="App.closeModal('modal-leave')"><i class="fas fa-times"></i></button>
+                <button class="details-close" style="background:transparent; border:none; cursor:pointer; font-size:18px;" onclick="App.closeModal('modal-leave')"><i class="fas fa-times"></i></button>
             </div>
             
             <form onsubmit="event.preventDefault(); App.submitLeave();">
@@ -196,7 +199,7 @@
         <div class="modal-content">
             <div class="details-header" style="padding: 0 0 24px 0; background: transparent; border-bottom: 1px solid var(--border-color); margin-bottom: 24px;">
                 <h1 style="margin:0; font-size: 20px;" class="th-en" data-th="🌙 บันทึกขอทำ OT" data-en="🌙 Request OT">🌙 บันทึกขอทำ OT</h1>
-                <button class="details-close" onclick="App.closeModal('modal-ot')"><i class="fas fa-times"></i></button>
+                <button class="details-close" style="background:transparent; border:none; cursor:pointer; font-size:18px;" onclick="App.closeModal('modal-ot')"><i class="fas fa-times"></i></button>
             </div>
             
             <form onsubmit="event.preventDefault(); App.submitOT();">
@@ -219,6 +222,25 @@
         </div>
     </div>
 
+    <div class="modal" id="modal-facescan">
+        <div class="modal-content" style="text-align:center; max-width:420px;">
+            <div class="details-header" style="justify-content:center; padding-bottom:16px; border-bottom:none; background:transparent;">
+                <h2 style="margin:0; font-size:20px; font-weight:800; color:var(--text-heading);"><i class="fas fa-fingerprint"></i> Biometric Verification</h2>
+            </div>
+            <p class="text-muted" style="font-size:13px; margin-bottom:20px;">Please position your face within the frame.</p>
+            
+            <div class="face-scanner-box">
+                <video id="face-video-ai" autoplay muted playsinline style="width:100%; height:100%; object-fit:cover; transform: scaleX(-1); position:absolute; top:0; left:0; z-index:1;"></video>
+                <canvas id="face-canvas-ai" style="position:absolute; top:0; left:0; z-index:2; transform: scaleX(-1);"></canvas>
+            </div>
+            
+            <div id="scan-status-ai" style="font-weight:600; font-size:14px; color:var(--text-body); margin-top:20px; min-height: 24px;">
+                <i class="fas fa-spinner fa-spin"></i> Initializing optics...
+            </div>
+            
+            <button class="btn-outline" style="margin-top:32px; width:100%;" onclick="App.cancelFaceScan()">Cancel</button>
+        </div>
+    </div>
     <div id="chat-widget" class="chat-widget" style="display: none;">
         <div class="chat-header" onclick="Chat.toggle(event)"> 
             <i class="fas fa-headset" style="font-size: 18px;"></i> HR Helpdesk Support
@@ -239,9 +261,20 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     
+    <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+    
     <script src="script.js"></script>
+    
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                .then(reg => console.log('ServiceWorker registered'))
+                .catch(err => console.log('ServiceWorker failed: ', err));
+            });
+        }
+    </script>
 </body>
 </html>
