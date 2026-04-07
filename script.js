@@ -1447,31 +1447,63 @@ window.onload = () => {
     setTimeout(() => {
         startApp();
     }, 150);
-    // ==========================================
-// 📱 MOBILE RESPONSIVE FIX (ปุ่มแฮมเบอร์เกอร์)
 // ==========================================
-function toggleSidebar() {
+// ==========================================
+// 📱 GOD-TIER MOBILE FIX (แก้บัคการคลิกทะลุ 100%)
+// ==========================================
+
+// 1. ฉีด CSS บังคับให้ Sidebar เด้งออกมาชัวร์ๆ (เผื่อ CSS เก่าโหลดไม่ทัน)
+const mobileStyleFix = document.createElement('style');
+mobileStyleFix.innerHTML = `
+    @media (max-width: 768px) { 
+        .sidebar.show { left: 0 !important; transform: translateX(0) !important; } 
+    }
+`;
+document.head.appendChild(mobileStyleFix);
+
+// 2. ฟังก์ชันเปิด/ปิด แบบป้องกันการคลิกทะลุ (Stop Propagation)
+window.toggleSidebar = function(event) {
+    if (event) {
+        event.preventDefault();
+        event.stopPropagation(); // 🛑 สกัดไม่ให้การคลิกทะลุไปโดนพื้นหลัง!
+    }
     const sidebar = document.querySelector('.sidebar');
     if (sidebar) {
         sidebar.classList.toggle('show');
     }
-}
+};
 
-// ✨ ฟังก์ชันเสริมความหล่อ: คลิกข้างนอก หรือ คลิกลิงก์เมนู แล้วให้ Sidebar หดกลับอัตโนมัติ
+// 3. ผูกปุ่มแฮมเบอร์เกอร์ใหม่ทั้งหมด
+document.addEventListener('DOMContentLoaded', () => {
+    const btn = document.querySelector('.hamburger-btn');
+    if (btn) {
+        btn.removeAttribute('onclick'); // ล้างคำสั่งเก่าใน HTML ทิ้ง
+        btn.addEventListener('click', function(e) {
+            window.toggleSidebar(e);
+        });
+    }
+});
+
+// 4. จิ้มพื้นที่ว่างบนจอ ให้ Sidebar หดเก็บ
 document.addEventListener('click', (e) => {
     const sidebar = document.querySelector('.sidebar');
-    const hamburger = document.querySelector('.hamburger-btn');
+    const btn = document.querySelector('.hamburger-btn');
     
-    // ถ้า Sidebar เปิดอยู่ในมือถือ
     if (sidebar && sidebar.classList.contains('show')) {
-        // ถ้าจุดที่คลิก ไม่ใช่ Sidebar และ ไม่ใช่ปุ่มแฮมเบอร์เกอร์ (คือการคลิกพื้นที่ว่างข้างนอก)
-        if (!sidebar.contains(e.target) && !hamburger.contains(e.target)) {
-            sidebar.classList.remove('show');
-        }
-        // หรือถ้าคลิกที่ปุ่มเมนู (nav-item) ก็ให้หดเก็บเลย จะได้ไม่บังจอ
-        if (e.target.closest('.nav-item')) {
+        // ถ้าไม่ได้จิ้มโดน Sidebar และ ไม่ได้จิ้มโดนปุ่มเมนู
+        if (!sidebar.contains(e.target) && (!btn || !btn.contains(e.target))) {
             sidebar.classList.remove('show');
         }
     }
+});
+
+// 5. จิ้มเลือกเมนู (Menu Item) แล้วให้หดเก็บอัตโนมัติ
+document.querySelectorAll('.nav-item').forEach(item => {
+    item.addEventListener('click', () => {
+        const sidebar = document.querySelector('.sidebar');
+        if (window.innerWidth <= 768 && sidebar) {
+            sidebar.classList.remove('show');
+       }
+    });
 });
 };
