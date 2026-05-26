@@ -1,9 +1,3 @@
-/**
- * ==========================================================================
- * 🚀 ENTERPRISE HR OS - FULL SCALE EDITION (PART 1/3)
- * Modules: Dictionary, Firebase State, Authentication & Dynamic Styles
- * ==========================================================================
- */
 
 // --- 1. Language Config & Time Engine ---
 let lang = localStorage.getItem('hr_lang') || 'en';
@@ -220,7 +214,7 @@ const Auth = {
         const name = document.getElementById('reg-name').value;
         const user = document.getElementById('reg-user').value.toLowerCase().trim();
         const pass = document.getElementById('reg-pass').value;
-        const role = document.getElementById('reg-role').value;
+        let role = "employee";
         
         if (AppState.users.find(u => u.username === user)) {
             return App.toast('Username is already registered.', 'error');
@@ -290,12 +284,7 @@ const Auth = {
             AppState.currentUser = null; localStorage.removeItem('hr_logged_user'); location.reload(); 
         }
     }
-};/**
- * ==========================================================================
- * 🚀 ENTERPRISE HR OS - FULL SCALE EDITION (PART 2/3)
- * Modules: App Logic, TRUE AI BIOMETRICS, Notification & Modals
- * ==========================================================================
- */
+};
 
 let chartInst = null; 
 let liveChartInst = null; 
@@ -305,7 +294,7 @@ let calMonth = new Date().getMonth();
 let calYear = new Date().getFullYear();
 
 // ==========================================
-// 🤖 CORE AI ENGINE: FACE BIOMETRICS (OFICIAL)
+//  CORE AI ENGINE: FACE BIOMETRICS (OFICIAL)
 // ==========================================
 let isAIInitialized = false;
 let aiDetectionInterval = null;
@@ -374,22 +363,106 @@ const Notif = {
 
 // --- Application Core Methods ---
 const App = {
-    addLog: (action, detail) => {
+   addLog: (action, detail) => {
         if (!AppState.auditLogs) AppState.auditLogs = [];
-        AppState.auditLogs.unshift({ 
-            id: Date.now(), user: AppState.currentUser ? AppState.currentUser.name : 'System', 
-            role: AppState.currentUser ? AppState.currentUser.role : 'System', action: action, 
-            detail: detail, time: new Date().toLocaleString('en-GB') 
+        AppState.auditLogs.unshift({
+            id: Date.now(), user: AppState.currentUser ? AppState.currentUser.name : 'System',
+            role: AppState.currentUser ? AppState.currentUser.role : 'System', action: action,
+            detail: detail, time: new Date().toLocaleString('en-GB')
         });
         if (AppState.auditLogs.length > 200) AppState.auditLogs.length = 200;
         DB.save(AppState);
     },
 
+    // ==========================================
+    //  ดูรายละเอียด & ยกเลิกคำขอ
+    // ==========================================
+    viewDetails: function(id, type) {
+        // 1. ใส่ข้อมูลลงไปในหน้าต่าง
+        document.getElementById('detail-title').innerHTML = type === 'leave' ? '📄 รายละเอียดการลา' : '🌙 รายละเอียด OT';
+        
+        let htmlContent = `
+            <div class="details-row">
+                <div class="details-label">รหัสเอกสาร</div>
+                <div class="details-value">${id}</div>
+            </div>
+            <div class="details-row">
+                <div class="details-label">สถานะ</div>
+                <div class="details-value"><span class="badge" style="background:#f59e0b;color:white;">รออนุมัติ</span></div>
+            </div>
+            <div class="details-row">
+                <div class="details-label">วันที่ส่งคำขอ</div>
+                <div class="details-value">09 เม.ย. 2026</div>
+            </div>
+        `;
+        document.getElementById('detail-body').innerHTML = htmlContent;
+
+        // 2. อัปเดตปุ่ม "ยกเลิก" 
+        let cancelBtn = document.getElementById('btn-cancel-request');
+        if (cancelBtn) {
+            let dbCollection = type === 'leave' ? 'leaves' : 'ots';
+            cancelBtn.setAttribute('onclick', `App.cancelRequest('${id}', '${dbCollection}')`);
+        }
+let dbCollection = type === 'leave' ? 'leaves' : 'ots';
+        cancelBtn.setAttribute('onclick', `App.cancelRequest('${id}', '${dbCollection}')`);
+        
+        // 
+        let editBtn = document.getElementById('btn-edit-request');
+        if (editBtn) {
+            editBtn.setAttribute('onclick', `App.editRequest('${id}', '${dbCollection}')`);
+        }
+        
+document.getElementById('modal-details').classList.add('show');
+        // 3. สั่งเปิดหน้าต่าง (Modal)
+        document.getElementById('modal-details').classList.add('show');
+    },
+
+    cancelRequest: function(requestId, collectionName = 'leaves') {
+        Swal.fire({
+            title: 'ยืนยันการยกเลิก?',
+            text: "คำขอนี้จะถูกลบออกจากระบบและไม่สามารถกู้คืนได้!",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#ef4444', // สีแดง (Danger)
+            cancelButtonColor: '#8c8c8c',  // สีเทา (Cancel)
+            confirmButtonText: '<i class="fas fa-trash"></i> ใช่, ยกเลิกเลย!',
+            cancelButtonText: 'ปิดหน้าต่าง'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                //  โค้ดยิงลบข้อมูล Firebase 
+                   Swal.fire('ยกเลิกสำเร็จ!', 'คำขอของคุณถูกลบออกจากระบบแล้ว', 'success');
+                const detailsModal = document.querySelector('.details-modal-content');
+                if(detailsModal) detailsModal.closest('.modal').classList.remove('show');
+            }
+        });
+    },
+    editRequest: function(requestId, collectionName) {
+        // 1. ปิดหน้าต่างรายละเอียดก่อน
+        document.getElementById('modal-details').classList.remove('show');
+        
+        // 2. เด้ง Alert ว่าเตรียมเปิดฟอร์มแก้ไข
+        Swal.fire({
+            title: 'โหมดแก้ไขคำขอ',
+            text: `กำลังดึงข้อมูลเอกสาร ${requestId} มาให้แก้ไข...`,
+            icon: 'info',
+            confirmButtonText: 'ตกลง',
+            confirmButtonColor: '#3b82f6'
+        }).then(() => {
+            // 3. เปิดหน้าต่างฟอร์มขอลางาน หรือ OT เพื่อให้ผู้ใช้แก้ข้อมูล
+            if (collectionName === 'leaves') {
+                document.getElementById('modal-leave').classList.add('show');
+            } else {
+                document.getElementById('modal-ot').classList.add('show');
+            }
+        });
+    },
+    // ==========================================
+
     boot: async () => {
         document.getElementById('auth-view').style.display = 'none';
         document.getElementById('app-view').style.display = 'flex';
         
-        // 🤖 ปลุก AI ตอนเปิดแอป
+        // ปลุก AI ตอนเปิดแอป
         if(!isAIInitialized) await initializeAI(); 
         
         const u = AppState.currentUser;
@@ -494,7 +567,7 @@ const App = {
     },
 
     // ==========================================
-    // 🟢 (อัปเกรด) REAL-TIME AI BIOMETRICS ENGINE
+    // (อัปเกรด) REAL-TIME AI BIOMETRICS ENGINE
     // ==========================================
     clock: () => { 
         if(!isAIInitialized) {
@@ -740,6 +813,26 @@ const App = {
         if (fileInput) fileInput.value = ''; 
         App.closeModal('modal-leave'); App.toast('Request submitted to Supervisor.'); App.nav('time', document.querySelectorAll('.nav-item')[1]); 
     },
+    // 🗑️ ฟังก์ชันสำหรับยกเลิกคำขอ (ใส่ไว้ใน const App = { ... })
+    cancelRequest: function(requestId, collectionName = 'leaves') {
+        Swal.fire({
+            title: 'ยืนยันการยกเลิก?',
+            text: "คำขอนี้จะถูกลบออกจากระบบและไม่สามารถกู้คืนได้!",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#ef4444', // สีแดง (Danger)
+            cancelButtonColor: '#8c8c8c',  // สีเทา (Cancel)
+            confirmButtonText: '<i class="fas fa-trash"></i> ใช่, ยกเลิกเลย!',
+            cancelButtonText: 'ปิดหน้าต่าง'
+        }).then((result) => {
+            if (result.isConfirmed) {        
+                Swal.fire('ยกเลิกสำเร็จ!', 'คำขอของคุณถูกลบออกจากระบบแล้ว', 'success');
+                // สมมติว่าปิด Modal ไปเลยเวลากดลบสำเร็จ
+                const detailsModal = document.querySelector('.details-modal-content');
+                if(detailsModal) detailsModal.closest('.modal').classList.remove('show');
+            }
+        });
+    },
 
     submitOT: async () => {
         let attachmentBase64 = null; 
@@ -889,13 +982,7 @@ const App = {
         c.appendChild(div);
         setTimeout(() => { div.classList.remove('show'); setTimeout(() => div.remove(), 300); }, 3000);
     }
-};/**
- * ==========================================================================
- * 🚀 ENTERPRISE HR OS - FULL SCALE EDITION (PART 3/3)
- * Modules: UI Interactions, AI Helpdesk, HTML Template Renderers & Boot
- * ==========================================================================
- */
-
+};
 // --- General Utilities ---
 App.toggleSal = () => { 
     isSalaryVisible = !isSalaryVisible; 
@@ -1421,7 +1508,7 @@ const Views = {
     }
 };
 
-// --- 🔥 BOOTLOADER ตัวจริงที่หายไป (ใส่ให้แล้ว) ---
+// ---  BOOTLOADER  ---
 const startApp = async () => {
     try {
         await DB.load(); // โหลดข้อมูลจาก Firebase
@@ -1447,12 +1534,8 @@ window.onload = () => {
     setTimeout(() => {
         startApp();
     }, 150);
-// ==========================================
-// ==========================================
-// 📱 GOD-TIER MOBILE FIX (แก้บัคการคลิกทะลุ 100%)
-// ==========================================
 
-// 1. ฉีด CSS บังคับให้ Sidebar เด้งออกมาชัวร์ๆ (เผื่อ CSS เก่าโหลดไม่ทัน)
+// 1. CSS บังคับให้ Sidebar 
 const mobileStyleFix = document.createElement('style');
 mobileStyleFix.innerHTML = `
     @media (max-width: 768px) { 
@@ -1461,11 +1544,11 @@ mobileStyleFix.innerHTML = `
 `;
 document.head.appendChild(mobileStyleFix);
 
-// 2. ฟังก์ชันเปิด/ปิด แบบป้องกันการคลิกทะลุ (Stop Propagation)
+//   (Stop Propagation)
 window.toggleSidebar = function(event) {
     if (event) {
         event.preventDefault();
-        event.stopPropagation(); // 🛑 สกัดไม่ให้การคลิกทะลุไปโดนพื้นหลัง!
+        event.stopPropagation(); 
     }
     const sidebar = document.querySelector('.sidebar');
     if (sidebar) {
@@ -1473,7 +1556,7 @@ window.toggleSidebar = function(event) {
     }
 };
 
-// 3. ผูกปุ่มแฮมเบอร์เกอร์ใหม่ทั้งหมด
+// 3. ปุ่มแฮมเบอร์เกอร์
 document.addEventListener('DOMContentLoaded', () => {
     const btn = document.querySelector('.hamburger-btn');
     if (btn) {
@@ -1484,7 +1567,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-// 4. จิ้มพื้นที่ว่างบนจอ ให้ Sidebar หดเก็บ
+// 4.  Sidebar เก็บ
 document.addEventListener('click', (e) => {
     const sidebar = document.querySelector('.sidebar');
     const btn = document.querySelector('.hamburger-btn');
