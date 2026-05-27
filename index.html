@@ -7,10 +7,46 @@
     
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=20260527-2252">
     <link rel="manifest" href="./manifest.json">
     <meta name="theme-color" content="#000000">
     <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3135/3135715.png">
+
+    <style>
+        /* 🆕 CSS สำหรับโลโก้คนทำ (Human-made Minimalist) */
+        .logo-human {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #0f172a; /* สีน้ำเงินเข้มเกือบดำ สไตล์องค์กร */
+            border-radius: 14px;
+            box-shadow: 0 10px 15px -3px rgba(15, 23, 42, 0.15);
+        }
+        .logo-human.large {
+            width: 64px;
+            height: 64px;
+            margin-bottom: 20px;
+        }
+        .logo-human.small {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+        }
+        .logo-human .text {
+            color: #ffffff;
+            font-family: 'Inter', system-ui, sans-serif;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+        }
+        .logo-human.large .text { font-size: 24px; }
+        .logo-human.small .text { font-size: 15px; }
+        
+        .logo-human .amp {
+            color: #3b82f6; /* สีฟ้าเน้นคำ */
+            font-weight: 600;
+            margin: 0 2px;
+        }
+    </style>
 </head>
 <body>
 
@@ -18,21 +54,14 @@
         <div class="auth-card">
             
             <div class="brand-header" style="margin-bottom: 32px;">
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="url(#brand-gradient)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 16px;">
-                    <defs>
-                        <linearGradient id="brand-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                            <stop offset="0%" stop-color="#111111" />
-                            <stop offset="100%" stop-color="#444444" />
-                        </linearGradient>
-                    </defs>
-                    <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
-                    <path d="M2 17l10 5 10-5"></path>
-                    <path d="M2 12l10 5 10-5"></path>
-                </svg>
+                <div class="logo-human large">
+                    <span class="text">S<span class="amp">&</span>J</span>
+                </div>
+                
                 <h1>Leave & Attendance</h1>
                 <p class="text-muted">S&J  Co., Ltd.</p>
                 <div class="badge" style="background: rgba(0, 0, 0, 0.05); color: var(--text-heading); margin-top: 12px; font-weight: 700; letter-spacing: 0.5px;">
-                    New ver v2.0
+                    ENTERPRISE OS v2.0
                 </div>
             </div>
             
@@ -57,28 +86,22 @@
                     <label class="th-en" data-th="ชื่อ-นามสกุล" data-en="Full Name">ชื่อ-นามสกุล</label>
                     <input type="text" id="reg-name" placeholder="John Doe" required>
                     
-                    <label class="th-en" data-th="รหัสพนักงาน" data-en="Desired Username">รหัสพนักงาน</label>
+                    <label class="th-en" data-th="รหัสพนักงาน" data-en="Employee ID">รหัสพนักงาน</label>
                     <input type="text" id="reg-user" placeholder="EMP-001" required>
                     
-                    <label class="th-en" data-th="รหัสผ่าน" data-en="Password">รหัสผ่าน</label>
+                    <label class="th-en" data-th="ตั้งรหัสผ่านเบื้องต้น" data-en="Password">ตั้งรหัสผ่านเบื้องต้น</label>
                     <input type="password" id="reg-pass" placeholder="••••••••" required>
                     
-                    <label class="th-en" data-th="ระดับสิทธิ์ (Role)" data-en="System Role">ระดับสิทธิ์ (Role)</label>
-                    <select id="reg-role">
-                        <option value="employee">Staff (พนักงานทั่วไป)</option>
-                        <option value="head">Supervisor (หัวหน้างาน)</option> 
-                        <option value="admin">Manager (HR)</option>
-                        <option value="it">System Administrator (IT)</option>
-                    </select>
-                    
-                    <button type="submit" class="btn-primary"><i class="fas fa-user-plus"></i> Create Account</button>
+                    <button type="submit" class="btn-primary">
+                        <i class="fas fa-paper-plane"></i> 
+                        <span class="th-en" data-th="ส่งคำขอเข้าใช้งานระบบ" data-en="Request Access">ส่งคำขอเข้าใช้งานระบบ</span>
+                    </button>
                 </form>
                 
                 <button class="btn-text th-en" data-th="มีบัญชีอยู่แล้ว? ย้อนกลับ" data-en="Already have an account? Go back" onclick="Auth.toggle('login')">
                     <i class="fas fa-arrow-left"></i> ย้อนกลับไปหน้าล็อกอิน
                 </button>
             </div>
-            
             <button type="button" class="lang-switch" onclick="toggleLanguage(event)">
                 <i class="fas fa-globe"></i> <span class="th-en" data-th="Switch to English" data-en="เปลี่ยนเป็นภาษาไทย">Switch Language</span>
             </button>
@@ -90,8 +113,8 @@
         <aside class="sidebar no-print">
             <div class="sidebar-header">
                 <div class="flex-between" style="justify-content: flex-start; gap: 16px;">
-                    <div style="background: var(--brand-main); border-radius: 12px; padding: 10px; display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow-sm);">
-                        <i class="fas fa-layer-group" style="color: white; font-size: 18px; margin: 0;"></i>
+                    <div class="logo-human small">
+                        <span class="text">S<span class="amp">&</span>J</span>
                     </div>
                     <div>
                         <h2>S&J Inter</h2>
@@ -140,15 +163,108 @@
             </header>
             
             <section class="content-area" id="page-content">
-                </section>
-            
+                
+                <div class="plan-ot-layout">
+                    
+                    <aside class="plan-ot-sidebar">
+                        <div class="sidebar-group">
+                            <label class="form-label">เลือกวันหยุด <span class="info-icon">ⓘ</span></label>
+                            <select class="ot-select">
+                                <option>-- เลือกวันหยุด --</option>
+                            </select>
+                        </div>
+
+                        <div class="sidebar-group text-center mt-4">
+                            <h5 class="section-title">รายชื่อพนักงาน</h5>
+                            <button class="btn-ot btn-blue w-100"> วันธรรมดา</button>
+                            <div class="employee-box">
+                                <div class="emp-item">Surasri</div>
+                                <div class="emp-item">Adoon</div>
+                                <div class="emp-item">Todsapol</div>
+                                <div class="emp-item">Chaiwat</div>
+                                <div class="emp-item">Natthi</div>
+                                <div class="emp-item">Siwakorn</div>
+                                <div class="emp-item">Pichet</div>
+                            </div>
+                        </div>
+
+                        <div class="sidebar-group">
+                            <button class="btn-ot btn-red w-100"> วันอาทิตย์</button>
+                            <div class="employee-box empty-box"></div>
+                        </div>
+
+                        <div class="sidebar-group action-group">
+                            <button class="btn-ot btn-black w-100">หยุด</button>
+                            <button class="btn-ot btn-grey w-100">ลา</button>
+                        </div>
+                    </aside>
+
+                    <main class="plan-ot-main">
+                        <div class="ot-header-nav">
+                            <div class="ot-tabs">
+                                <button class="ot-tab active">กะ A</button>
+                                <button class="ot-tab">กะ B</button>
+                            </div>
+                            <button class="btn-ot btn-green"> ยืนยันแผนการทำงาน</button>
+                        </div>
+
+                        <div class="ot-grid">
+                            
+                            <div class="ot-table-wrapper">
+                                <div class="ot-table-header">( กะ A มีวันอาทิตย์ ) แผน OT เข้า 1 คน</div>
+                                <table class="ot-table">
+                                    <thead>
+                                        <tr>
+                                            <th rowspan="2">Building<br>Staff</th>
+                                            <th>จ.</th><th>อ.</th><th>พ.</th><th>พฤ.</th><th>ศ.</th><th>ส.</th><th>อา.</th>
+                                            <th rowspan="2">เวลา<br>ทำงาน</th><th rowspan="2">เวลา<br>OT</th><th rowspan="2">รวม</th>
+                                        </tr>
+                                        <tr class="date-row">
+                                            <th>6</th><th>7</th><th>8</th><th>9</th><th>10</th><th>11</th><th>12</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr><td>BA</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td>56</td><td>0</td><td class="text-blue">56</td></tr>
+                                        <tr><td>B9</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td>56</td><td>0</td><td class="text-blue">56</td></tr>
+                                        <tr><td>B7</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td>56</td><td>0</td><td class="text-blue">56</td></tr>
+                                        <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td>56</td><td>0</td><td class="text-blue">56</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <div class="ot-table-wrapper">
+                                <div class="ot-table-header">( กะ A ไม่มีวันอาทิตย์ ) แผน OT เข้า 1 คน</div>
+                                <table class="ot-table">
+                                    <thead>
+                                        <tr>
+                                            <th rowspan="2">Building<br>Staff</th>
+                                            <th>จ.</th><th>อ.</th><th>พ.</th><th>พฤ.</th><th>ศ.</th><th>ส.</th><th>อา.</th>
+                                            <th rowspan="2">เวลา<br>ทำงาน</th><th rowspan="2">เวลา<br>OT</th><th rowspan="2">รวม</th>
+                                        </tr>
+                                        <tr class="date-row">
+                                            <th>6</th><th>7</th><th>8</th><th>9</th><th>10</th><th>11</th><th>12</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr><td>BA</td><td></td><td></td><td></td><td></td><td></td><td></td><td class="bg-dark">หยุด</td><td>48</td><td>0</td><td class="text-blue">48</td></tr>
+                                        <tr><td>B9</td><td></td><td></td><td></td><td></td><td></td><td></td><td class="bg-dark">หยุด</td><td>48</td><td>0</td><td class="text-blue">48</td></tr>
+                                        <tr><td>B7</td><td></td><td></td><td></td><td></td><td></td><td></td><td class="bg-dark">หยุด</td><td>48</td><td>0</td><td class="text-blue">48</td></tr>
+                                        <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td class="bg-dark">หยุด</td><td>48</td><td>0</td><td class="text-blue">48</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                        </div>
+                    </main>
+                </div>
+            </section>
         </main>
     </div>
 
     <div class="modal" id="modal-leave">
         <div class="modal-content">
             <div class="details-header" style="padding: 0 0 24px 0; background: transparent; border-bottom: 1px solid var(--border-color); margin-bottom: 24px;">
-                <h1 style="margin:0; font-size: 20px;" class="th-en" data-th="📝 บันทึกขอลางาน" data-en="📝 Request Leave">📝 ขอลางาน</h1>
+                <h1 style="margin:0; font-size: 20px;" class="th-en" data-th="บันทึกขอลางาน" data-en="Request Leave">ขอลางาน</h1>
                 <button class="details-close" style="background:transparent; border:none; cursor:pointer; font-size:18px;" onclick="App.closeModal('modal-leave')"><i class="fas fa-times"></i></button>
             </div>
             
@@ -172,7 +288,7 @@
                 
                 <div class="grid-2" id="input-fullday">
                     <div><label class="th-en" data-th="เริ่มวันที่" data-en="Start Date">เริ่มวันที่</label><input type="date" id="lv-start-date" required></div>
-                    <div><label class="th-en" data-th="ถึงวันที่" data-en="End Date">ถึงวันที่</label><input type="date" id="lv-end-date" required></div>
+                    <div><label class="th-en" data-th="ถึงวันที่" data-en="End Date">ถึงวันที่</label><input type="date" id="lv-end-date"></div>
                 </div>
                 
                 <div class="grid-3" id="input-hourly" style="display: none;">
@@ -198,7 +314,7 @@
     <div class="modal" id="modal-ot">
         <div class="modal-content">
             <div class="details-header" style="padding: 0 0 24px 0; background: transparent; border-bottom: 1px solid var(--border-color); margin-bottom: 24px;">
-                <h1 style="margin:0; font-size: 20px;" class="th-en" data-th="🌙 บันทึกขอทำ OT" data-en="🌙 Request OT">🌙 บันทึกขอทำ OT</h1>
+                <h1 style="margin:0; font-size: 20px;" class="th-en" data-th="บันทึกขอทำ OT" data-en="Request OT">บันทึกขอทำ OT</h1>
                 <button class="details-close" style="background:transparent; border:none; cursor:pointer; font-size:18px;" onclick="App.closeModal('modal-ot')"><i class="fas fa-times"></i></button>
             </div>
             
@@ -222,6 +338,31 @@
         </div>
     </div>
 
+    <div class="modal" id="modal-details">
+        <div class="modal-content details-modal-content">
+            <div class="details-header">
+                <h1 style="margin:0; font-size: 18px;" id="detail-title">รายละเอียดคำขอ</h1>
+                <button class="details-close" onclick="App.closeModal('modal-details')" style="background:transparent; border:none; cursor:pointer; font-size:18px;"><i class="fas fa-times"></i></button>
+            </div>
+            
+            <div class="details-body" id="detail-body">
+                <p class="text-muted text-center">กำลังโหลดข้อมูล...</p>
+            </div>
+            
+            <div class="details-footer" style="padding: 16px 24px; background: #fafafa; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; gap: 12px;">
+                <button class="btn-outline" onclick="App.closeModal('modal-details')">ปิดหน้าต่าง</button>
+                
+                <button class="btn-primary" style="background: var(--warning); border-color: var(--warning); color: white;" id="btn-edit-request" onclick="App.editRequest('REPLACE_ID', 'leaves')">
+                    <i class="fas fa-edit"></i> แก้ไขคำขอ
+                </button>
+
+                <button class="btn-primary" style="background: var(--danger); border-color: var(--danger);" id="btn-cancel-request" onclick="App.cancelRequest('REPLACE_ID', 'leaves')">
+                    <i class="fas fa-trash"></i> ยกเลิกคำขอนี้
+                </button>
+            </div>
+        </div>
+    </div>
+
     <div class="modal" id="modal-facescan">
         <div class="modal-content" style="text-align:center; max-width:420px;">
             <div class="details-header" style="justify-content:center; padding-bottom:16px; border-bottom:none; background:transparent;">
@@ -241,18 +382,40 @@
             <button class="btn-outline" style="margin-top:32px; width:100%;" onclick="App.cancelFaceScan()">Cancel</button>
         </div>
     </div>
+    
     <div id="chat-widget" class="chat-widget" style="display: none;">
-        <div class="chat-header" onclick="Chat.toggle(event)"> 
-            <i class="fas fa-headset" style="font-size: 18px;"></i> HR Helpdesk Support
-            <span id="chat-unread" class="badge" style="background: var(--danger); color: white; display: none; margin-left: auto; box-shadow: 0 2px 8px rgba(244, 63, 94, 0.4);">New Message</span>
+        <div class="chat-header" onclick="Chat.toggle(event)">
+            <div class="chat-header-main">
+                <div class="chat-avatar-wrap">
+                    <img id="chat-agent-avatar" src="https://ui-avatars.com/api/?name=HR&background=1d4ed8&color=ffffff" alt="Agent">
+                    <span class="chat-online-dot"></span>
+                </div>
+                <div class="chat-header-meta">
+                    <div class="chat-title">HR Helpdesk Support</div>
+                    <div class="chat-subtitle">Live Assistance • Avg reply < 1 min</div>
+                </div>
+            </div>
+            <div class="chat-header-tools">
+                <span id="chat-unread" class="badge chat-unread-badge" style="display:none;">New</span>
+                <button type="button" class="chat-action-btn" onclick="Chat.toggle(event)" title="Minimize chat">
+                    <i class="fas fa-chevron-down"></i>
+                </button>
+            </div>
         </div>
         
         <div class="chat-body" id="chat-body" style="display:none;">
+            <div class="chat-quickbar">
+                <button type="button" class="chat-chip" onclick="Chat.quickReply('Leave request help')"><i class="fas fa-umbrella-beach"></i> Leave</button>
+                <button type="button" class="chat-chip" onclick="Chat.quickReply('OT request help')"><i class="fas fa-moon"></i> OT</button>
+                <button type="button" class="chat-chip" onclick="Chat.quickReply('Payslip question')"><i class="fas fa-file-invoice-dollar"></i> Payslip</button>
+            </div>
             <div id="chat-messages" class="chat-messages"></div>
             <form class="chat-input" onsubmit="event.preventDefault(); Chat.send();">
                 <input type="text" id="chat-text" placeholder="Type your message..." required autocomplete="off">
-                <button type="submit" class="btn-primary" style="padding: 14px; border-radius: 12px;"><i class="fas fa-paper-plane" style="margin: 0;"></i></button>
+                <button type="button" class="chat-input-tool" onclick="Chat.toggleEmojiPicker(event)" title="Emoji"><i class="far fa-smile"></i></button>
+                <button type="submit" class="btn-primary chat-send-btn"><i class="fas fa-paper-plane" style="margin: 0;"></i></button>
             </form>
+            <div id="chat-emoji-picker" class="chat-emoji-picker" style="display:none;"></div>
         </div>
     </div>
 
@@ -265,14 +428,23 @@
     
     <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
     
-    <script src="script.js"></script>
+    <script src="script.js?v=20260527-2252"></script>
     
     <script>
+        // Force-disable stale Service Worker cache in local/dev mode
         if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js')
-                .then(reg => console.log('ServiceWorker registered'))
-                .catch(err => console.log('ServiceWorker failed: ', err));
+            window.addEventListener('load', async () => {
+                try {
+                    const regs = await navigator.serviceWorker.getRegistrations();
+                    await Promise.all(regs.map(reg => reg.unregister()));
+                    if (window.caches && caches.keys) {
+                        const keys = await caches.keys();
+                        await Promise.all(keys.map(key => caches.delete(key)));
+                    }
+                    console.log('ServiceWorker and caches cleared for fresh assets.');
+                } catch (err) {
+                    console.log('ServiceWorker cleanup failed:', err);
+                }
             });
         }
     </script>

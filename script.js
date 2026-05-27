@@ -1,5 +1,5 @@
 
-// --- 1. Language Config & Time Engine ---
+//  Language Config & Time Engine ---
 let lang = localStorage.getItem('hr_lang') || 'en';
 
 const dict = {
@@ -87,7 +87,7 @@ function applyLang() {
     });
 }
 
-// --- 2. Dynamic CSS Injection ---
+// ---  Dynamic CSS Injection ---
 if (!document.getElementById('custom-dynamic-styles')) {
     const style = document.createElement('style');
     style.id = 'custom-dynamic-styles';
@@ -204,7 +204,7 @@ const DB = {
     }
 };
 
-// --- 4. Secure Authentication ---
+// ---  Secure Authentication ---
 const Auth = {
     toggle: (type) => {
         document.getElementById('form-login').style.display = type === 'login' ? 'block' : 'none';
@@ -300,6 +300,8 @@ let isAIInitialized = false;
 let aiDetectionInterval = null;
 let currentStream = null;
 let verificationTimer = null;
+let isFaceScanActive = false;
+let isClockProcessing = false;
 
 const initializeAI = async () => {
     try {
@@ -378,7 +380,6 @@ const App = {
     //  ดูรายละเอียด & ยกเลิกคำขอ
     // ==========================================
     viewDetails: function(id, type) {
-        // 1. ใส่ข้อมูลลงไปในหน้าต่าง
         document.getElementById('detail-title').innerHTML = type === 'leave' ? '📄 รายละเอียดการลา' : '🌙 รายละเอียด OT';
         
         let htmlContent = `
@@ -396,8 +397,6 @@ const App = {
             </div>
         `;
         document.getElementById('detail-body').innerHTML = htmlContent;
-
-        // 2. อัปเดตปุ่ม "ยกเลิก" 
         let cancelBtn = document.getElementById('btn-cancel-request');
         if (cancelBtn) {
             let dbCollection = type === 'leave' ? 'leaves' : 'ots';
@@ -413,7 +412,7 @@ let dbCollection = type === 'leave' ? 'leaves' : 'ots';
         }
         
 document.getElementById('modal-details').classList.add('show');
-        // 3. สั่งเปิดหน้าต่าง (Modal)
+        //  สั่งเปิดหน้าต่าง (Modal)
         document.getElementById('modal-details').classList.add('show');
     },
 
@@ -429,7 +428,7 @@ document.getElementById('modal-details').classList.add('show');
             cancelButtonText: 'ปิดหน้าต่าง'
         }).then((result) => {
             if (result.isConfirmed) {
-                //  โค้ดยิงลบข้อมูล Firebase 
+                // ลบข้อมูล Firebase 
                    Swal.fire('ยกเลิกสำเร็จ!', 'คำขอของคุณถูกลบออกจากระบบแล้ว', 'success');
                 const detailsModal = document.querySelector('.details-modal-content');
                 if(detailsModal) detailsModal.closest('.modal').classList.remove('show');
@@ -437,10 +436,9 @@ document.getElementById('modal-details').classList.add('show');
         });
     },
     editRequest: function(requestId, collectionName) {
-        // 1. ปิดหน้าต่างรายละเอียดก่อน
         document.getElementById('modal-details').classList.remove('show');
         
-        // 2. เด้ง Alert ว่าเตรียมเปิดฟอร์มแก้ไข
+        //  เด้ง Alert ว่าเตรียมเปิดฟอร์มแก้ไข
         Swal.fire({
             title: 'โหมดแก้ไขคำขอ',
             text: `กำลังดึงข้อมูลเอกสาร ${requestId} มาให้แก้ไข...`,
@@ -448,7 +446,7 @@ document.getElementById('modal-details').classList.add('show');
             confirmButtonText: 'ตกลง',
             confirmButtonColor: '#3b82f6'
         }).then(() => {
-            // 3. เปิดหน้าต่างฟอร์มขอลางาน หรือ OT เพื่อให้ผู้ใช้แก้ข้อมูล
+            //  เปิดหน้าต่างฟอร์มขอลางาน หรือ OT เพื่อให้ผู้ใช้แก้ข้อมูล
             if (collectionName === 'leaves') {
                 document.getElementById('modal-leave').classList.add('show');
             } else {
@@ -567,17 +565,22 @@ document.getElementById('modal-details').classList.add('show');
     },
 
     // ==========================================
-    // (อัปเกรด) REAL-TIME AI BIOMETRICS ENGINE
+    //  REAL-TIME AI BIOMETRICS ENGINE
     // ==========================================
     clock: () => { 
         if(!isAIInitialized) {
             App.toast('AI models are still loading. Please wait...', 'warning');
             return;
         }
+        if (isFaceScanActive) return;
         App.startRealAIFaceScan(); 
     },
     
     startRealAIFaceScan: async () => {
+        if (isFaceScanActive) return;
+        isFaceScanActive = true;
+        if (aiDetectionInterval) { clearInterval(aiDetectionInterval); aiDetectionInterval = null; }
+        if (verificationTimer) { clearTimeout(verificationTimer); verificationTimer = null; }
         App.openModal('modal-facescan');
         
         const video = document.getElementById('face-video-ai');
@@ -591,11 +594,12 @@ document.getElementById('modal-details').classList.add('show');
             video.srcObject = stream;
             currentStream = stream; 
 
-            video.addEventListener('play', () => {
+            video.onplay = () => {
                 const displaySize = { width: video.width || 300, height: video.height || 300 };
                 faceapi.matchDimensions(canvas, displaySize);
                 
-                let isFaceStableForTime = 0; 
+                let isFaceStableForTime = 0;
+                let hasProcessedClockForThisScan = false;
                 clearTimeout(verificationTimer);
 
                 aiDetectionInterval = setInterval(async () => {
@@ -623,6 +627,8 @@ document.getElementById('modal-details').classList.add('show');
                             ctx.fillStyle = 'rgba(52, 211, 153, 0.1)'; ctx.fillRect(0,0,300,300);
 
                             verificationTimer = setTimeout(() => {
+                                if (hasProcessedClockForThisScan) return;
+                                hasProcessedClockForThisScan = true;
                                 App.cancelFaceScan(); 
                                 App.processClock();  
                             }, 1000);
@@ -632,7 +638,7 @@ document.getElementById('modal-details').classList.add('show');
                         isFaceStableForTime = 0; 
                     }
                 }, 150); 
-            });
+            };
 
         } catch (err) {
             console.error("Camera access error:", err);
@@ -642,13 +648,14 @@ document.getElementById('modal-details').classList.add('show');
     },
 
     cancelFaceScan: () => {
+        isFaceScanActive = false;
         App.closeModal('modal-facescan');
         if (currentStream) {
             currentStream.getTracks().forEach(track => track.stop()); 
             currentStream = null;
         }
-        if (aiDetectionInterval) clearInterval(aiDetectionInterval); 
-        if (verificationTimer) clearTimeout(verificationTimer); 
+        if (aiDetectionInterval) { clearInterval(aiDetectionInterval); aiDetectionInterval = null; }
+        if (verificationTimer) { clearTimeout(verificationTimer); verificationTimer = null; }
 
         const video = document.getElementById('face-video-ai');
         const canvas = document.getElementById('face-canvas-ai');
@@ -657,39 +664,104 @@ document.getElementById('modal-details').classList.add('show');
     },
 
     processClock: () => {
+        if (isClockProcessing) return;
+        isClockProcessing = true;
+        try {
         const u = AppState.currentUser.username;
         const d = new Date().toLocaleDateString('en-CA');
         const locElement = document.getElementById('work-location');
         const loc = locElement ? locElement.value : 'Office';
+        const nowMs = Date.now();
+
+        // Prevent duplicate writes from overlapping face-scan callbacks.
+        if (AppState.lastClockActionAt && (nowMs - AppState.lastClockActionAt) < 2000) return;
+        AppState.lastClockActionAt = nowMs;
         
         if (!AppState.dailyClock[u] || AppState.dailyClock[u].date !== d) {
-            AppState.dailyClock[u] = { date: d, status: 'out', in: null };
+            AppState.dailyClock[u] = { date: d, status: 'out', in: null, logId: null };
         }
         
         let c = AppState.dailyClock[u];
         
-        if (c.status === 'out') { 
+        if (c.status === 'out') {
+            const existingOpenRow = AppState.timeLogs.find(l => l.u === u && l.d === d && l.open === true);
+            if (existingOpenRow) {
+                c.status = 'in';
+                c.in = existingOpenRow.clockInMs || nowMs;
+                c.loc = existingOpenRow.loc || loc;
+                c.logId = existingOpenRow.id || null;
+                DB.save(AppState);
+                App.updateClock();
+                return;
+            }
+
+            const inTime = new Date(nowMs).toLocaleTimeString('en-US', {hour:'2-digit', minute:'2-digit'});
+            const logId = nowMs;
+
             c.status = 'in'; 
-            c.in = Date.now(); 
+            c.in = nowMs; 
             c.loc = loc; 
+            c.logId = logId;
+
+            // Create open attendance row immediately: OUT remains blank until next scan.
+            AppState.timeLogs.unshift({
+                id: logId,
+                u: u,
+                d: d,
+                in: inTime,
+                out: '-',
+                hrs: '-',
+                loc: loc,
+                clockInMs: nowMs,
+                open: true
+            });
+
             App.addLog('Attendance', `Clocked in via True AI Biometrics (${loc})`);
             App.toast('Identity Verified. Clocked in.', 'success'); 
         } else {
-            const hrs = ((Date.now() - c.in) / 3600000).toFixed(2);
-            AppState.timeLogs.unshift({ 
-                u: u, d: d, 
-                in: new Date(c.in).toLocaleTimeString('en-US', {hour:'2-digit', minute:'2-digit'}), 
-                out: new Date().toLocaleTimeString('en-US', {hour:'2-digit', minute:'2-digit'}), 
-                hrs: hrs, loc: c.loc 
-            });
+            if ((nowMs - c.in) < 15000) {
+                DB.save(AppState);
+                App.updateClock();
+                return;
+            }
+            const hrs = ((nowMs - c.in) / 3600000).toFixed(2);
+            const outTime = new Date(nowMs).toLocaleTimeString('en-US', {hour:'2-digit', minute:'2-digit'});
+            const openRow = AppState.timeLogs.find(l =>
+                l.u === u &&
+                l.d === d &&
+                (String(l.id) === String(c.logId) || l.open === true)
+            );
+
+            if (openRow) {
+                openRow.out = outTime;
+                openRow.hrs = hrs;
+                openRow.open = false;
+            } else {
+                // Fallback for legacy data/state mismatch.
+                AppState.timeLogs.unshift({
+                    id: nowMs,
+                    u: u,
+                    d: d,
+                    in: new Date(c.in).toLocaleTimeString('en-US', {hour:'2-digit', minute:'2-digit'}),
+                    out: outTime,
+                    hrs: hrs,
+                    loc: c.loc,
+                    open: false
+                });
+            }
+
             c.status = 'out'; 
             c.in = null; 
+            c.logId = null;
             App.addLog('Attendance', `Clocked out via True AI Biometrics. Session: ${hrs}h`);
             App.toast(`Session Ended. Total: ${hrs}h`, 'success');
         }
         
         DB.save(AppState); 
         App.updateClock();
+        } finally {
+            isClockProcessing = false;
+        }
     },
 
     updateClock: () => {
@@ -742,8 +814,9 @@ document.getElementById('modal-details').classList.add('show');
     },
 
     showRequestDetails: (id) => {
-        const r = AppState.requests.find(x => x.id === id);
-        if (!r) return;
+        const r = AppState.requests.find(x => String(x.id) === String(id));
+        if (!r) return App.toast('ไม่พบข้อมูลคำขอนี้', 'error');
+        
         let m = document.getElementById('modal-smart-details');
         if (!m) { 
             m = document.createElement('div'); m.className = 'modal'; m.id = 'modal-smart-details'; document.body.appendChild(m); 
@@ -753,13 +826,22 @@ document.getElementById('modal-details').classList.add('show');
         const submittedTime = dateObj.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
         
         let badgeColor = '#b45309', badgeBg = '#fef3c7', statText = r.status.split(' ')[0];
-        if (r.status === 'Approved') { badgeColor = '#047857'; badgeBg = '#d1fae5'; } 
-        else if (r.status === 'Rejected') { badgeColor = '#be123c'; badgeBg = '#ffe4e6'; } 
+        if (r.status.includes('Approved')) { badgeColor = '#047857'; badgeBg = '#d1fae5'; } 
+        else if (r.status.includes('Rejected')) { badgeColor = '#be123c'; badgeBg = '#ffe4e6'; } 
         else if (r.status.includes('Pending')) { statText = 'Pending'; } 
 
         const durationStr = r.type === 'OT' ? r.detail : '1.00 Day';
         const headApprover = AppState.users.find(u => u.role === 'head');
         let attachmentHTML = r.attachment ? `<div style="margin-top:10px;"><a href="${r.attachment}" target="_blank" style="color:var(--primary); font-size:12px; text-decoration:none;"><i class="fas fa-paperclip"></i> View Attached Evidence</a></div>` : '';
+
+        let actionBtns = '';
+        if (r.status.includes('Pending')) {
+            let collectionType = (r.type === 'Leave' || r.type === 'leave') ? 'leaves' : 'ots';
+            actionBtns = `
+                <button class="btn-outline" style="border: 1px solid #cbd5e1; color: #334155; font-size:13px; padding:8px 16px;" onclick="App.editRequest('${r.id}', '${collectionType}')"><i class="fas fa-pen"></i> Edit</button>
+                <a href="#" onclick="App.cancelRequest('${r.id}', '${collectionType}'); event.preventDefault();" style="color: #ef4444; font-size:13px; text-decoration:underline; margin-left: 16px;">Cancel request</a>
+            `;
+        }
 
         m.innerHTML = `
             <div class="details-modal-content">
@@ -767,29 +849,25 @@ document.getElementById('modal-details').classList.add('show');
                 <div class="details-body">
                     <div class="details-title-row">
                         <h3>${r.type === 'OT' ? 'Overtime Request' : r.detail}</h3>
-                        <span style="background:${badgeBg}; color:${badgeColor}; padding:4px 12px; border-radius:20px; font-size:12px; font-weight:700;">${statText}</span>
+                        <span style="background:${badgeBg}; color:${badgeColor}; padding:4px 12px; border-radius:20px; font-size:12px; font-weight:700;">${r.status}</span>
                     </div>
                     <div class="details-row"><span class="details-label">Employee:</span> <span class="details-value">${r.name} (EMP-${r.u.toUpperCase()})</span></div>
                     <div class="details-row"><span class="details-label">Approver:</span> <span class="details-value">${headApprover ? headApprover.name : 'Supervisor'}</span></div>
                     <div class="details-row"><span class="details-label">Date:</span> <span class="details-value">${submittedDate}</span></div>
                     <div class="details-row"><span class="details-label">Duration:</span> <span class="details-value">${durationStr}</span></div>
                     <div class="details-notes">
-                        <span style="font-size:11px; color:#64748b; font-weight:600; text-transform:uppercase; margin-bottom:6px; display:block;">Previous notes:</span>
-                        <p><b>${submittedDate} ${submittedTime} - ${r.name}:</b><br>${r.reason || 'No description provided.'}</p>
+                        <span style="font-size:11px; color:#64748b; font-weight:600; text-transform:uppercase; margin-bottom:6px; display:block;">Reason / Notes:</span>
+                        <p>${r.reason || '-'}</p>
                         ${attachmentHTML}
                     </div>
                 </div>
-                <div class="details-footer">
-                    <button class="btn-outline" style="border: 1px solid #cbd5e1; color: #334155; font-size:13px; padding:8px 16px;" onclick="App.closeModal('modal-smart-details')"><i class="fas fa-pen"></i> Edit</button>
-                    <div style="display:flex; gap:16px; align-items:center;">
-                        <a href="#" onclick="App.closeModal('modal-smart-details'); event.preventDefault();" style="color: #3b82f6; font-size:13px; text-decoration:underline;">Cancel request</a>
-                        <button class="btn-primary" style="background:#3b82f6; font-size:13px; padding:8px 20px; border-radius:6px;" onclick="App.closeModal('modal-smart-details')">OK</button>
-                    </div>
+                <div class="details-footer" style="display:flex; align-items:center; width:100%;">
+                    ${actionBtns}
+                    <button class="btn-primary" style="background:#3b82f6; font-size:13px; padding:8px 20px; border-radius:6px; margin-left:auto;" onclick="App.closeModal('modal-smart-details')">OK</button>
                 </div>
             </div>`;
         App.openModal('modal-smart-details');
     },
-
     submitLeave: async () => {
         const u = AppState.currentUser.username;
         const k = document.getElementById('lv-type').value.includes('Annual') ? 'annual' : 'sick';
@@ -806,30 +884,82 @@ document.getElementById('modal-details').classList.add('show');
         AppState.requests.unshift({ 
             id: Date.now(), type: 'Leave', u: u, name: AppState.currentUser.name, 
             detail: document.getElementById('lv-type').value, reason: document.getElementById('lv-reason').value, 
-            attachment: attachmentBase64, status: 'Pending (Supervisor)' 
+            attachment: attachmentBase64, status: 'Pending (Supervisor)',
+            leaveType: k, leaveDays: days
         });
         
         App.addLog('Workflow', `Submitted Leave Request`); DB.save(AppState); 
-        if (fileInput) fileInput.value = ''; 
+        const lvTypeEl = document.getElementById('lv-type');
+        const lvFormatEl = document.getElementById('lv-format');
+        const lvStartDateEl = document.getElementById('lv-start-date');
+        const lvEndDateEl = document.getElementById('lv-end-date');
+        const lvSingleDateEl = document.getElementById('lv-single-date');
+        const lvTimeStartEl = document.getElementById('lv-time-start');
+        const lvTimeEndEl = document.getElementById('lv-time-end');
+        const lvReasonEl = document.getElementById('lv-reason');
+        if (lvTypeEl) lvTypeEl.selectedIndex = 0;
+        if (lvFormatEl) lvFormatEl.value = 'fullday';
+        App.toggleLeaveFormat('fullday');
+        if (lvStartDateEl) lvStartDateEl.value = '';
+        if (lvEndDateEl) lvEndDateEl.value = '';
+        if (lvSingleDateEl) lvSingleDateEl.value = '';
+        if (lvTimeStartEl) lvTimeStartEl.value = '';
+        if (lvTimeEndEl) lvTimeEndEl.value = '';
+        if (lvReasonEl) lvReasonEl.value = '';
+        if (fileInput) fileInput.value = '';
         App.closeModal('modal-leave'); App.toast('Request submitted to Supervisor.'); App.nav('time', document.querySelectorAll('.nav-item')[1]); 
     },
-    // 🗑️ ฟังก์ชันสำหรับยกเลิกคำขอ (ใส่ไว้ใน const App = { ... })
-    cancelRequest: function(requestId, collectionName = 'leaves') {
+    // ฟังก์ชันยกเลิกคำขอ 
+ cancelRequest: function(requestId, collectionName = 'leaves') {
+        App.closeModal('modal-smart-details');
+        App.closeModal('modal-details');
         Swal.fire({
             title: 'ยืนยันการยกเลิก?',
             text: "คำขอนี้จะถูกลบออกจากระบบและไม่สามารถกู้คืนได้!",
             icon: 'warning',
             showCancelButton: true,
-            confirmButtonColor: '#ef4444', // สีแดง (Danger)
-            cancelButtonColor: '#8c8c8c',  // สีเทา (Cancel)
+            confirmButtonColor: '#ef4444', 
+            cancelButtonColor: '#8c8c8c',  
             confirmButtonText: '<i class="fas fa-trash"></i> ใช่, ยกเลิกเลย!',
-            cancelButtonText: 'ปิดหน้าต่าง'
+            cancelButtonText: 'ปิดหน้าต่าง',
+            target: document.body
         }).then((result) => {
-            if (result.isConfirmed) {        
-                Swal.fire('ยกเลิกสำเร็จ!', 'คำขอของคุณถูกลบออกจากระบบแล้ว', 'success');
-                // สมมติว่าปิด Modal ไปเลยเวลากดลบสำเร็จ
-                const detailsModal = document.querySelector('.details-modal-content');
-                if(detailsModal) detailsModal.closest('.modal').classList.remove('show');
+            if (result.isConfirmed) {
+                const reqToCancel = AppState.requests.find(r => String(r.id) === String(requestId));
+                const isLeaveRequest = collectionName === 'leaves' || String(reqToCancel?.type || '').toLowerCase() === 'leave';
+                if (reqToCancel && isLeaveRequest) {
+                    const leaveOwner = reqToCancel.u;
+                    const leaveKey = reqToCancel.leaveType || (reqToCancel.detail && reqToCancel.detail.includes('Annual') ? 'annual' : 'sick');
+                    const leaveDays = typeof reqToCancel.leaveDays === 'number' ? reqToCancel.leaveDays : 1;
+                    if (!AppState.leaveBalances[leaveOwner]) {
+                        AppState.leaveBalances[leaveOwner] = { annual: AppState.settings.leaveQuota, sick: 30 };
+                    }
+                    AppState.leaveBalances[leaveOwner][leaveKey] = (AppState.leaveBalances[leaveOwner][leaveKey] || 0) + leaveDays;
+                }
+
+                // 1. ลบข้อมูลออกจาก State และ Firebase
+                AppState.requests = AppState.requests.filter(r => String(r.id) !== String(requestId));
+                DB.save(AppState);
+                if (collectionName === 'ots') {
+                    db.collection('ots').doc(String(requestId)).delete().catch(e => console.log(e));
+                } else {
+                    db.collection('leaves').doc(String(requestId)).delete().catch(e => console.log(e));
+                }
+                
+                // 2. ปิดหน้าต่าง Modal
+                App.closeModal('modal-smart-details');
+
+                // 3. เด้งแจ้งเตือนสำเร็จ พร้อมวาดตารางใหม่
+                Swal.fire('ยกเลิกสำเร็จ!', 'คำขอของคุณถูกลบออกจากระบบแล้ว', 'success').then(() => {
+                    const container = document.getElementById('page-content');
+                    if (container) {
+                        container.innerHTML = Views['time']();
+                        // บังคับให้เปิดแท็บ "ประวัติการลา / OT" (แท็บขวา) ทันที
+                        const tab2Btn = document.querySelectorAll('.tab-btn')[1];
+                        if (tab2Btn) App.switchTab('t2', tab2Btn);
+                    }
+                    App.updateBadge(); // อัปเดตตัวเลขแจ้งเตือนสีแดง
+                });
             }
         });
     },
@@ -846,7 +976,13 @@ document.getElementById('modal-details').classList.add('show');
         });
         
         App.addLog('Workflow', `Submitted OT Request`); DB.save(AppState); 
-        if (fileInput) fileInput.value = ''; 
+        const otDateEl = document.getElementById('ot-date');
+        const otHoursEl = document.getElementById('ot-hours');
+        const otReasonEl = document.getElementById('ot-reason');
+        if (otDateEl) otDateEl.value = '';
+        if (otHoursEl) otHoursEl.value = '';
+        if (otReasonEl) otReasonEl.value = '';
+        if (fileInput) fileInput.value = '';
         App.closeModal('modal-ot'); App.toast('OT request submitted to Supervisor.'); App.nav('time', document.querySelectorAll('.nav-item')[1]);
     },
 
@@ -914,6 +1050,96 @@ document.getElementById('modal-details').classList.add('show');
         App.openModal('modal-edit-user'); 
     },
 
+    openAddUser: () => {
+        let m = document.getElementById('modal-add-user');
+        if (!m) {
+            m = document.createElement('div');
+            m.className = 'modal';
+            m.id = 'modal-add-user';
+            document.body.appendChild(m);
+        }
+
+        m.innerHTML = `
+            <div class="modal-content">
+                <div class="flex-between" style="margin-bottom:24px;">
+                    <h1 style="margin:0; font-size:18px;"><i class="fas fa-user-plus"></i> Add Employee</h1>
+                    <button class="btn-text" style="font-size:20px; color:var(--text-muted);" onclick="App.closeModal('modal-add-user')"><i class="fas fa-times"></i></button>
+                </div>
+                <form onsubmit="event.preventDefault(); App.saveAddUser();">
+                    <label>Full Name</label>
+                    <input type="text" id="add-u-name" placeholder="John Doe" required>
+                    <label>Employee ID / Username</label>
+                    <input type="text" id="add-u-username" placeholder="EMP001" required>
+                    <label>Department</label>
+                    <input type="text" id="add-u-dept" placeholder="Operations" required>
+                    <div class="grid-2">
+                        <div>
+                            <label>Role</label>
+                            <select id="add-u-role">
+                                <option value="emp">Employee</option>
+                                <option value="head">Head</option>
+                                <option value="admin">Admin</option>
+                                <option value="it">IT</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label>Temporary Password</label>
+                            <input type="text" id="add-u-pass" value="123456" required>
+                        </div>
+                    </div>
+                    <div class="flex-between" style="margin-top:28px; gap:12px;">
+                        <button type="button" class="btn-outline" style="flex:1;" onclick="App.closeModal('modal-add-user')">Cancel</button>
+                        <button type="submit" class="btn-primary" style="flex:2;"><i class="fas fa-check-circle"></i> Create Employee</button>
+                    </div>
+                </form>
+            </div>
+        `;
+        App.openModal('modal-add-user');
+    },
+
+    saveAddUser: () => {
+        const usernameRaw = document.getElementById('add-u-username').value.trim();
+        const username = usernameRaw.toLowerCase();
+        const name = document.getElementById('add-u-name').value.trim();
+        const dept = document.getElementById('add-u-dept').value.trim();
+        const role = document.getElementById('add-u-role').value;
+        const password = document.getElementById('add-u-pass').value.trim();
+
+        if (!username || !name || !dept || !password) {
+            App.toast('Please fill all required fields.', 'error');
+            return;
+        }
+        if (!/^[a-z0-9._-]+$/i.test(username)) {
+            App.toast('Username can use A-Z, 0-9, dot, dash, underscore only.', 'error');
+            return;
+        }
+        if (AppState.users.some(u => u.username.toLowerCase() === username)) {
+            App.toast('This employee ID already exists.', 'error');
+            return;
+        }
+
+        AppState.users.push({
+            username,
+            name,
+            dept,
+            role,
+            password,
+            isActive: true
+        });
+        AppState.leaveBalances[username] = {
+            annual: AppState.settings.leaveQuota,
+            sick: 30
+        };
+        if (!AppState.profiles[username]) AppState.profiles[username] = { email: '', phone: '', startDate: '' };
+
+        App.addLog('Access Control', `Created new employee account: ${username}`);
+        DB.save(AppState);
+        App.closeModal('modal-add-user');
+        App.toast('Employee added successfully.', 'success');
+        const activeNav = document.querySelector('.nav-item.active');
+        App.nav('admin-dir', activeNav);
+    },
+
     saveEditUser: (username) => { 
         const u = AppState.users.find(x => x.username === username); 
         if (u) { u.name = document.getElementById('edit-u-name').value; u.dept = document.getElementById('edit-u-dept').value; u.role = document.getElementById('edit-u-role').value; } 
@@ -931,9 +1157,46 @@ document.getElementById('modal-details').classList.add('show');
         if (u) { 
             u.isActive = u.isActive === false ? true : false; 
             App.addLog('Access Control', `Changed account status for ${username} to ${u.isActive ? 'Active' : 'Suspended'}`); DB.save(AppState); App.toast(`Account status updated.`, 'success'); 
-            const navEl = Array.from(document.querySelectorAll('.nav-item')).find(el => el.innerText.includes('Directory') || el.innerText.includes('รายชื่อ') || el.innerText.includes('Manage')); 
-            if (navEl) App.nav('admin-dir', navEl); 
+            const activeNav = document.querySelector('.nav-item.active');
+            App.nav('admin-dir', activeNav); 
         } 
+    },
+
+    deleteUser: (username) => {
+        if (username === AppState.currentUser.username) return App.toast('You cannot delete your own account.', 'error');
+        const user = AppState.users.find(x => x.username === username);
+        if (!user) return App.toast('User not found.', 'error');
+
+        const doDelete = () => {
+            AppState.users = AppState.users.filter(x => x.username !== username);
+            if (AppState.leaveBalances && AppState.leaveBalances[username]) delete AppState.leaveBalances[username];
+            if (AppState.profiles && AppState.profiles[username]) delete AppState.profiles[username];
+            if (AppState.dailyClock && AppState.dailyClock[username]) delete AppState.dailyClock[username];
+            if (Array.isArray(AppState.requests)) AppState.requests = AppState.requests.filter(r => r.u !== username);
+            if (Array.isArray(AppState.timeLogs)) AppState.timeLogs = AppState.timeLogs.filter(t => t.u !== username);
+
+            App.addLog('Access Control', `Deleted employee account: ${username}`);
+            DB.save(AppState);
+            App.toast('User deleted successfully.', 'success');
+            const activeNav = document.querySelector('.nav-item.active');
+            App.nav('admin-dir', activeNav);
+        };
+
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                title: 'Delete this user?',
+                text: `This will permanently delete ${user.name} (${username}) and related records.`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Delete user',
+                confirmButtonColor: '#dc2626',
+                cancelButtonText: 'Cancel'
+            }).then((result) => {
+                if (result.isConfirmed) doDelete();
+            });
+        } else {
+            if (window.confirm(`Delete ${user.name} (${username})?`)) doDelete();
+        }
     },
 
     saveSettings: () => { 
@@ -1073,17 +1336,58 @@ App.getSalary = () => {
 // --- Advanced AI Chatbot System ---
 const Chat = {
     isOpen: false, currentRoom: '', unsubscribe: null,
+    emojiList: ['😀','😁','😂','🤣','😊','😍','😘','🥰','😎','🤩','🤗','😇','🙂','🙌','👏','🙏','🔥','💯','✅','❌','⏰','📌','📅','📈','💼','🧾','💸','🎉','🚀','⚡','🌟','💙'],
     init: () => {
         const u = AppState.currentUser; if (!Chat.currentRoom) Chat.currentRoom = u.username;
         const header = document.querySelector('.chat-header');
+        const currentRoomUser = AppState.users.find(x => x.username === Chat.currentRoom) || u;
+        const roomAvatar = (AppState.profiles && AppState.profiles[currentRoomUser.username] && AppState.profiles[currentRoomUser.username].avatar)
+            ? AppState.profiles[currentRoomUser.username].avatar
+            : `https://ui-avatars.com/api/?name=${encodeURIComponent(currentRoomUser.name || 'HR')}&background=1d4ed8&color=ffffff`;
+        const roomLabel = (u.role === 'employee') ? 'HR Helpdesk Support' : `Support Room • ${currentRoomUser.name}`;
         if (u.role !== 'employee') {
             const selectHtml = `
-                <select id="chat-room-select" onchange="Chat.changeRoom(this.value)" style="margin-left: 10px; padding: 2px 6px; font-size: 11px; border-radius: 4px; color: black; border: none; max-width: 130px; outline:none; cursor:pointer;">
+                <select id="chat-room-select" onchange="Chat.changeRoom(this.value)" style="padding: 5px 8px; font-size: 11px; border-radius: 8px; color: #0f172a; border: 1px solid #bfdbfe; max-width: 160px; outline:none; cursor:pointer;">
                     ${AppState.users.map(x => `<option value="${x.username}" ${x.username === Chat.currentRoom ? 'selected' : ''}>${x.name}</option>`).join('')}
                 </select>
             `;
-            header.innerHTML = `<i class="fas fa-headset"></i> Support ${selectHtml} <span id="chat-unread" class="badge" style="background:#ef4444; color:white; display:none; margin-left:auto; border:none; padding:2px 6px; font-size:10px;">New</span>`;
-        } else { header.innerHTML = `<i class="fas fa-headset"></i> HR Helpdesk <span id="chat-unread" class="badge" style="background:#ef4444; color:white; display:none; margin-left:auto; border:none; padding:2px 6px; font-size:10px;">New</span>`; }
+            header.innerHTML = `
+                <div class="chat-header-main">
+                    <div class="chat-avatar-wrap">
+                        <img id="chat-agent-avatar" src="${roomAvatar}" alt="Agent">
+                        <span class="chat-online-dot"></span>
+                    </div>
+                    <div class="chat-header-meta">
+                        <div class="chat-title">${roomLabel}</div>
+                        <div class="chat-subtitle">${selectHtml}</div>
+                    </div>
+                </div>
+                <div class="chat-header-tools">
+                    <span id="chat-unread" class="badge chat-unread-badge" style="display:none;">New</span>
+                    <button type="button" class="chat-action-btn" onclick="Chat.toggle(event)" title="Minimize chat"><i class="fas fa-chevron-down"></i></button>
+                </div>
+            `;
+        } else {
+            header.innerHTML = `
+                <div class="chat-header-main">
+                    <div class="chat-avatar-wrap">
+                        <img id="chat-agent-avatar" src="${roomAvatar}" alt="Agent">
+                        <span class="chat-online-dot"></span>
+                    </div>
+                    <div class="chat-header-meta">
+                        <div class="chat-title">${roomLabel}</div>
+                        <div class="chat-subtitle">Live Assistance • Avg reply < 1 min</div>
+                    </div>
+                </div>
+                <div class="chat-header-tools">
+                    <span id="chat-unread" class="badge chat-unread-badge" style="display:none;">New</span>
+                    <button type="button" class="chat-action-btn" onclick="Chat.toggle(event)" title="Minimize chat"><i class="fas fa-chevron-down"></i></button>
+                </div>
+            `;
+        }
+        Chat.renderEmojiPicker();
+        document.removeEventListener('click', Chat.handleOutsideClick);
+        document.addEventListener('click', Chat.handleOutsideClick);
         Chat.loadMessages();
     },
     changeRoom: (roomUser) => { Chat.currentRoom = roomUser; Chat.loadMessages(); },
@@ -1098,11 +1402,17 @@ const Chat = {
             messages.forEach(msg => {
                 const isSelf = msg.u === AppState.currentUser.username; 
                 const time = msg.timestamp ? new Date(msg.timestamp.toDate()).toLocaleTimeString('en-US', {hour:'2-digit', minute:'2-digit'}) : 'Just now';
+                const avatar = (AppState.profiles && AppState.profiles[msg.u] && AppState.profiles[msg.u].avatar)
+                    ? AppState.profiles[msg.u].avatar
+                    : `https://ui-avatars.com/api/?name=${encodeURIComponent(msg.name || 'User')}&background=e2e8f0&color=334155`;
                 html += `
-                    <div class="msg-bubble ${isSelf ? 'msg-self' : 'msg-other'}"> 
-                        ${!isSelf ? `<div class="msg-name">${msg.name} <span style="font-weight:400; opacity:0.6;">(${msg.role})</span></div>` : ''} 
-                        <div>${msg.text}</div> 
-                        <div class="msg-time">${time}</div> 
+                    <div class="chat-row ${isSelf ? 'chat-row-self' : ''}">
+                        ${isSelf ? '' : `<img class="chat-avatar" src="${avatar}" alt="${msg.name}">`}
+                        <div class="msg-bubble ${isSelf ? 'msg-self' : 'msg-other'}"> 
+                            ${!isSelf ? `<div class="msg-name">${msg.name} <span style="font-weight:500; opacity:0.55;">(${msg.role})</span></div>` : ''} 
+                            <div>${msg.text}</div> 
+                            <div class="msg-time">${time}</div> 
+                        </div>
                     </div>
                 `;
             });
@@ -1116,12 +1426,48 @@ const Chat = {
         });
     },
     toggle: (e) => { 
-        if (e && e.target.id === 'chat-room-select') return; 
+        if (e && (e.target.id === 'chat-room-select' || e.target.closest('#chat-room-select'))) return;
         Chat.isOpen = !Chat.isOpen; document.getElementById('chat-body').style.display = Chat.isOpen ? 'block' : 'none'; 
-        if (Chat.isOpen) { document.getElementById('chat-unread').style.display = 'none'; const box = document.getElementById('chat-messages'); box.scrollTop = box.scrollHeight; } 
+        if (Chat.isOpen) { document.getElementById('chat-unread').style.display = 'none'; const box = document.getElementById('chat-messages'); box.scrollTop = box.scrollHeight; }
+        else { Chat.closeEmojiPicker(); }
+    },
+    quickReply: (text) => {
+        const input = document.getElementById('chat-text');
+        if (!input) return;
+        input.value = text;
+        input.focus();
+    },
+    renderEmojiPicker: () => {
+        const picker = document.getElementById('chat-emoji-picker');
+        if (!picker) return;
+        picker.innerHTML = Chat.emojiList.map(emoji => `<button type="button" class="emoji-btn" onclick="Chat.insertEmoji('${emoji}')" title="${emoji}">${emoji}</button>`).join('');
+    },
+    toggleEmojiPicker: (event) => {
+        if (event) event.stopPropagation();
+        const picker = document.getElementById('chat-emoji-picker');
+        if (!picker) return;
+        picker.style.display = picker.style.display === 'grid' ? 'none' : 'grid';
+    },
+    closeEmojiPicker: () => {
+        const picker = document.getElementById('chat-emoji-picker');
+        if (picker) picker.style.display = 'none';
+    },
+    insertEmoji: (emoji) => {
+        const input = document.getElementById('chat-text');
+        if (!input) return;
+        input.value = `${input.value}${emoji}`;
+        input.focus();
+    },
+    handleOutsideClick: (event) => {
+        const picker = document.getElementById('chat-emoji-picker');
+        const emojiBtn = event.target.closest('.chat-input-tool');
+        const insidePicker = event.target.closest('#chat-emoji-picker');
+        if (!picker) return;
+        if (!insidePicker && !emojiBtn) Chat.closeEmojiPicker();
     },
     send: () => { 
         const input = document.getElementById('chat-text'); const text = input.value.trim(); if (!text) return; input.value = ''; 
+        Chat.closeEmojiPicker();
         db.collection('hr_chats').add({ room: Chat.currentRoom, text: text, u: AppState.currentUser.username, name: AppState.currentUser.name, role: AppState.currentUser.role.toUpperCase(), timestamp: firebase.firestore.FieldValue.serverTimestamp() }).catch(err => console.error("Chat Error:", err)); 
         
         const mLower = text.toLowerCase(); let reply = "I've recorded your query. A human specialist will review it shortly."; 
@@ -1132,7 +1478,7 @@ const Chat = {
         setTimeout(() => {
             const list = document.getElementById('chat-messages');
             if(list) {
-                list.innerHTML += `<div class="msg-bubble msg-other" style="border-left: 3px solid var(--brand-main);"><strong style="color:var(--brand-main); font-size:12px; display:block; margin-bottom:4px;">Helios AI</strong>${reply}<div style="font-size:10px; margin-top:6px; opacity:0.8;">Just now</div></div>`;
+                list.innerHTML += `<div class="chat-row"><img class="chat-avatar" src="https://ui-avatars.com/api/?name=Helios&background=e2e8f0&color=334155" alt="Helios"><div class="msg-bubble msg-other"><div class="msg-name">Helios AI <span style="font-weight:500; opacity:0.55;">(BOT)</span></div>${reply}<div class="msg-time">Just now</div></div></div>`;
                 list.scrollTop = list.scrollHeight;
             }
         }, 1500);
@@ -1390,7 +1736,7 @@ const Views = {
         <div style="animation: fadeUp 0.4s ease-out;"> 
             <div class="flex-between" style="margin-bottom:24px;"> 
                 <h1 style="margin:0;"><i class="fas fa-users text-muted"></i> ${t('admin_dir')}</h1> 
-                <div style="display:flex; gap:12px;"> <button class="btn-outline" onclick="App.exportToCSV()"><i class="fas fa-file-csv"></i> Export CSV</button> <button class="btn-primary" style="width:auto;"><i class="fas fa-user-plus"></i> Add Employee</button> </div> 
+                <div style="display:flex; gap:12px;"> <button class="btn-outline" onclick="App.exportToCSV()"><i class="fas fa-file-csv"></i> Export CSV</button> <button class="btn-primary" style="width:auto;" onclick="App.openAddUser()"><i class="fas fa-user-plus"></i> Add Employee</button> </div> 
             </div> 
             <div class="card table-wrapper" style="padding:0;"> 
                 <table style="margin:0;"> 
@@ -1399,9 +1745,10 @@ const Views = {
                         const isActive = u.isActive !== false; 
                         const statusBadge = isActive ? `<span class="badge" style="background:#ecfdf5; color:#047857; border: 1px solid #a7f3d0;">${t('btn_active')}</span>` : `<span class="badge" style="background:#fef2f2; color:#b91c1c; border: 1px solid #fecaca;">${t('btn_inactive')}</span>`; 
                         const toggleBtnStr = isActive ? `<i class="fas fa-ban"></i> ${t('act_disable')}` : `<i class="fas fa-check"></i> ${t('act_enable')}`; 
-                        const toggleBtnColor = isActive ? `var(--danger)` : `var(--success)`; 
-                        let resetBtn = (currentUserRole === 'admin' || currentUserRole === 'it') ? `<button class="btn-outline" style="padding:6px 10px; margin-right:4px; font-size:13px;" onclick="App.resetPass('${u.username}')" title="Reset Password"><i class="fas fa-key text-muted" style="margin:0;"></i></button>` : '';
-                        return `<tr><td style="font-size:12px; color:var(--text-muted);">EMP-${u.username.toUpperCase()}</td><td><b style="color:var(--primary);">${u.name}</b><br><span style="font-size:12px; color:var(--text-muted);">${u.dept || '-'}</span></td><td><span class="badge" style="background:#f8fafc; border:1px solid var(--border); color:var(--text-dark);">${u.role.toUpperCase()}</span></td><td>${statusBadge}</td><td style="text-align:right; white-space:nowrap;">${resetBtn} <button class="btn-outline" style="padding:6px 12px; font-size:12px; width:auto; margin-right: 4px;" onclick="App.openEditUser('${u.username}')"><i class="fas fa-pen"></i> Edit</button> <button class="btn-primary" style="background:${toggleBtnColor}; padding:6px 12px; font-size:12px; width:auto;" onclick="App.toggleUserStatus('${u.username}')">${toggleBtnStr}</button></td></tr>`; 
+                        const toggleBtnClass = isActive ? 'btn-user-action btn-user-action-suspend' : 'btn-user-action btn-user-action-activate';
+                        let resetBtn = (currentUserRole === 'admin' || currentUserRole === 'it') ? `<button class="btn-user-action btn-user-action-reset" onclick="App.resetPass('${u.username}')" title="Reset Password"><i class="fas fa-key"></i><span>Reset Password</span></button>` : '';
+                        let deleteBtn = (currentUserRole === 'admin' || currentUserRole === 'it') ? `<button class="btn-user-action btn-user-action-delete" onclick="App.deleteUser('${u.username}')"><i class="fas fa-trash-alt"></i><span>Delete</span></button>` : '';
+                        return `<tr><td style="font-size:12px; color:var(--text-muted);">EMP-${u.username.toUpperCase()}</td><td><b style="color:var(--primary);">${u.name}</b><br><span style="font-size:12px; color:var(--text-muted);">${u.dept || '-'}</span></td><td><span class="badge" style="background:#f8fafc; border:1px solid var(--border); color:var(--text-dark);">${u.role.toUpperCase()}</span></td><td>${statusBadge}</td><td style="text-align:right;"><div class="user-action-group">${resetBtn}<button class="btn-user-action btn-user-action-edit" onclick="App.openEditUser('${u.username}')"><i class="fas fa-user-edit"></i><span>Edit</span></button><button class="${toggleBtnClass}" onclick="App.toggleUserStatus('${u.username}')">${toggleBtnStr}</button>${deleteBtn}</div></td></tr>`; 
                     }).join('')}</tbody> 
                 </table> 
             </div> 
@@ -1516,11 +1863,11 @@ const startApp = async () => {
         
         const savedUser = localStorage.getItem('hr_logged_user');
         if (savedUser) {
-            // มีคนล็อกอินค้างไว้ ให้เข้าหน้าแอปเลย
+            // 
             AppState.currentUser = JSON.parse(savedUser);
             App.boot();
         } else {
-            // ไม่เคยล็อกอิน ให้โชว์หน้า Auth
+            // 
             document.getElementById('auth-view').style.display = 'block';
             document.getElementById('app-view').style.display = 'none';
         }
@@ -1530,12 +1877,12 @@ const startApp = async () => {
 };
 
 window.onload = () => {
-    // ให้เวลา Firebase ติดเครื่องแป๊บนึง
+    // Firebase ติดเครื่อง
     setTimeout(() => {
         startApp();
     }, 150);
 
-// 1. CSS บังคับให้ Sidebar 
+//  CSS บังคับให้ Sidebar 
 const mobileStyleFix = document.createElement('style');
 mobileStyleFix.innerHTML = `
     @media (max-width: 768px) { 
@@ -1544,7 +1891,7 @@ mobileStyleFix.innerHTML = `
 `;
 document.head.appendChild(mobileStyleFix);
 
-//   (Stop Propagation)
+//  (Stop Propagation)
 window.toggleSidebar = function(event) {
     if (event) {
         event.preventDefault();
@@ -1556,7 +1903,7 @@ window.toggleSidebar = function(event) {
     }
 };
 
-// 3. ปุ่มแฮมเบอร์เกอร์
+// ปุ่มแฮมเบอร์เกอร์
 document.addEventListener('DOMContentLoaded', () => {
     const btn = document.querySelector('.hamburger-btn');
     if (btn) {
@@ -1567,7 +1914,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-// 4.  Sidebar เก็บ
+//  Sidebar 
 document.addEventListener('click', (e) => {
     const sidebar = document.querySelector('.sidebar');
     const btn = document.querySelector('.hamburger-btn');
@@ -1580,7 +1927,7 @@ document.addEventListener('click', (e) => {
     }
 });
 
-// 5. จิ้มเลือกเมนู (Menu Item) แล้วให้หดเก็บอัตโนมัติ
+//  (Menu Item) 
 document.querySelectorAll('.nav-item').forEach(item => {
     item.addEventListener('click', () => {
         const sidebar = document.querySelector('.sidebar');
